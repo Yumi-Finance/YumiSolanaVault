@@ -3,7 +3,7 @@
 import { AnchorProvider } from "@coral-xyz/anchor";
 import { Connection, Transaction, TransactionInstruction } from "@solana/web3.js";
 import { AnchorWallet } from "@solana/wallet-adapter-react";
-import { VaultClient } from "@yumi/vault-sdk";
+import { VaultClient } from "@yumi-finance/vault-sdk";
 
 export class AppVaultClient extends VaultClient {
   constructor(connection: Connection, wallet: AnchorWallet) {
@@ -19,7 +19,7 @@ export class AppVaultClient extends VaultClient {
   }
 }
 
-export { VaultClient } from "@yumi/vault-sdk";
+export { VaultClient } from "@yumi-finance/vault-sdk";
 export type {
   VaultPoolAccount,
   ProtocolConfigAccount,
@@ -27,7 +27,7 @@ export type {
   InitPoolParams,
   UpdatePoolParams,
   PoolAddresses,
-} from "@yumi/vault-sdk";
+} from "@yumi-finance/vault-sdk";
 export {
   lamportsToUi,
   uiToLamports,
@@ -38,4 +38,4 @@ export {
   depositDeadlineTs,
   userExpectedReturn,
   apyBpsToPercent,
-} from "@yumi/vault-sdk";
+} from "@yumi-finance/vault-sdk";

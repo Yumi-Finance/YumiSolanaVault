@@ -1,9 +1,17 @@
 {
-  "name": "@yumi/vault-sdk",
+  "name": "@yumi-finance/vault-sdk",
   "version": "0.1.0",
   "description": "SDK for Yumi Solana Fixed-Term Vault contracts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Yumi-Finance/YumiSolanaVault.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  },
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist"

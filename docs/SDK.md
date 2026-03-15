@@ -1,15 +1,15 @@
-# @yumi/vault-sdk — SDK Documentation
+# @yumi-finance/vault-sdk — SDK Documentation
 
-**Package:** `@yumi/vault-sdk`  
+**Package:** `@yumi-finance/vault-sdk`  
 **Version:** 0.1.0  
 **Dependencies:** `@coral-xyz/anchor`, `@solana/web3.js`, `@solana/spl-token`
 
 ## Installation
 
 ```bash
-npm install @yumi/vault-sdk
+npm install @yumi-finance/vault-sdk
 # or link locally:
-# "dependencies": { "@yumi/vault-sdk": "file:../sdk" }
+# "dependencies": { "@yumi-finance/vault-sdk": "file:../sdk" }
 ```
 
 ## Quick Start
@@ -17,7 +17,7 @@ npm install @yumi/vault-sdk
 ```typescript
 import { AnchorProvider, BN } from "@coral-xyz/anchor";
 import { Connection, PublicKey } from "@solana/web3.js";
-import { VaultClient, lamportsToUi } from "@yumi/vault-sdk";
+import { VaultClient, lamportsToUi } from "@yumi-finance/vault-sdk";
 
 const provider = new AnchorProvider(connection, wallet, { commitment: "confirmed" });
 const client = new VaultClient(provider);
@@ -144,7 +144,7 @@ Sign and send transactions via the provider wallet. Return the transaction signa
 Standalone PDA derivation (no client needed). All accept an optional `programId` parameter (defaults to `FIXED_VAULT_PROGRAM_ID`).
 
 ```typescript
-import { findPoolPda, findPermitPda, FIXED_VAULT_PROGRAM_ID } from "@yumi/vault-sdk";
+import { findPoolPda, findPermitPda, FIXED_VAULT_PROGRAM_ID } from "@yumi-finance/vault-sdk";
 
 const [poolPda, bump] = findPoolPda(1);           // pool_id = 1
 const [permit, _] = findPermitPda(poolPda, userPk);
@@ -166,7 +166,7 @@ const [permit, _] = findPermitPda(poolPda, userPk);
 ### Formatting
 
 ```typescript
-import { lamportsToUi, uiToLamports, shortAddress, formatTimestamp, apyBpsToPercent } from "@yumi/vault-sdk";
+import { lamportsToUi, uiToLamports, shortAddress, formatTimestamp, apyBpsToPercent } from "@yumi-finance/vault-sdk";
 
 lamportsToUi(new BN(1_500_000), 6);     // "1.500000"
 uiToLamports("1.5", 6);                 // BN(1500000)
@@ -179,7 +179,7 @@ apyBpsToPercent(850);                    // "8.50"
 ### Pool Analytics
 
 ```typescript
-import { poolFillPercent, daysToMaturity, depositDeadlineTs } from "@yumi/vault-sdk";
+import { poolFillPercent, daysToMaturity, depositDeadlineTs } from "@yumi-finance/vault-sdk";
 
 poolFillPercent(pool);           // 75.5 (percent filled)
 daysToMaturity(pool.maturityTs); // 45 (days remaining, 0 if matured)
@@ -189,7 +189,7 @@ depositDeadlineTs(pool);         // BN timestamp or null
 ### User Position
 
 ```typescript
-import { userExpectedReturn } from "@yumi/vault-sdk";
+import { userExpectedReturn } from "@yumi-finance/vault-sdk";
 
 // Before withdrawals enabled: returns yToken balance (= principal + interest)
 // After withdrawals enabled:  returns yBalance × totalRepaid / totalExpectedReturn
