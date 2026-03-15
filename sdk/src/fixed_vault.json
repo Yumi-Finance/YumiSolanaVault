@@ -1,0 +1,1276 @@
+{
+  "address": "1hV5chUTbSWcaGH76TpXq8iCFQrjKPACGF6eD68nT53",
+  "metadata": {
+    "name": "fixed_vault",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Fixed-term USDC vault with rolling cap"
+  },
+  "instructions": [
+    {
+      "name": "accept_authority",
+      "discriminator": [
+        107,
+        86,
+        198,
+        91,
+        33,
+        12,
+        107,
+        160
+      ],
+      "accounts": [
+        {
+          "name": "new_authority",
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "admin_withdraw",
+      "discriminator": [
+        160,
+        166,
+        147,
+        222,
+        46,
+        220,
+        75,
+        224
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "deposit_vault",
+          "writable": true
+        },
+        {
+          "name": "admin_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "deposit",
+      "discriminator": [
+        242,
+        35,
+        198,
+        137,
+        82,
+        225,
+        242,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "user_token_account",
+          "writable": true
+        },
+        {
+          "name": "deposit_vault",
+          "writable": true
+        },
+        {
+          "name": "yield_mint",
+          "writable": true
+        },
+        {
+          "name": "user_yield_account",
+          "writable": true
+        },
+        {
+          "name": "permit",
+          "docs": [
+            "Optional: deposit permit (required when pool.whitelist_enabled)"
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "enable_withdrawals",
+      "discriminator": [
+        97,
+        146,
+        76,
+        161,
+        177,
+        54,
+        109,
+        83
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "grant_permit",
+      "discriminator": [
+        170,
+        94,
+        187,
+        22,
+        42,
+        224,
+        162,
+        203
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool"
+        },
+        {
+          "name": "permit",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  114,
+                  109,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "arg",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "user",
+          "type": "pubkey"
+        },
+        {
+          "name": "max_amount",
+          "type": "u64"
+        },
+        {
+          "name": "expires_at",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "init_config",
+      "discriminator": [
+        23,
+        235,
+        115,
+        232,
+        168,
+        96,
+        1,
+        231
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "init_pool",
+      "discriminator": [
+        116,
+        233,
+        199,
+        204,
+        115,
+        159,
+        171,
+        36
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "deposit_mint"
+        },
+        {
+          "name": "deposit_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  45,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "repay_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  97,
+                  121,
+                  45,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "yield_mint",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  121,
+                  105,
+                  101,
+                  108,
+                  100,
+                  45,
+                  109,
+                  105,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "InitPoolParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "propose_authority",
+      "discriminator": [
+        20,
+        148,
+        236,
+        198,
+        76,
+        119,
+        99,
+        142
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "repay",
+      "discriminator": [
+        234,
+        103,
+        67,
+        82,
+        208,
+        234,
+        219,
+        166
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "admin_token_account",
+          "writable": true
+        },
+        {
+          "name": "repay_vault",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "revoke_permit",
+      "discriminator": [
+        1,
+        245,
+        99,
+        29,
+        176,
+        216,
+        229,
+        206
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool"
+        },
+        {
+          "name": "permit",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  114,
+                  109,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "permit.user",
+                "account": "DepositPermit"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_pool",
+      "discriminator": [
+        239,
+        214,
+        170,
+        78,
+        36,
+        35,
+        30,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "UpdatePoolParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "withdraw",
+      "discriminator": [
+        183,
+        18,
+        70,
+        156,
+        148,
+        109,
+        161,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "yield_mint",
+          "writable": true
+        },
+        {
+          "name": "user_yield_account",
+          "writable": true
+        },
+        {
+          "name": "repay_vault",
+          "writable": true
+        },
+        {
+          "name": "user_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "DepositPermit",
+      "discriminator": [
+        68,
+        213,
+        173,
+        19,
+        4,
+        241,
+        232,
+        101
+      ]
+    },
+    {
+      "name": "ProtocolConfig",
+      "discriminator": [
+        207,
+        91,
+        250,
+        28,
+        152,
+        179,
+        215,
+        209
+      ]
+    },
+    {
+      "name": "VaultPool",
+      "discriminator": [
+        64,
+        55,
+        145,
+        17,
+        146,
+        105,
+        18,
+        195
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "DepositTooSmall",
+      "msg": "Deposit amount is below the minimum"
+    },
+    {
+      "code": 6001,
+      "name": "PoolCapExceeded",
+      "msg": "Deposit would exceed the pool cap"
+    },
+    {
+      "code": 6002,
+      "name": "MaturityNotReached",
+      "msg": "Maturity date has not been reached yet"
+    },
+    {
+      "code": 6003,
+      "name": "DepositDeadlinePassed",
+      "msg": "Deposit deadline has passed"
+    },
+    {
+      "code": 6004,
+      "name": "CapBelowActive",
+      "msg": "New cap cannot be below current total active deposits"
+    },
+    {
+      "code": 6005,
+      "name": "MathOverflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6006,
+      "name": "NotWhitelisted",
+      "msg": "Deposit requires a valid whitelist permit"
+    },
+    {
+      "code": 6007,
+      "name": "PermitExpired",
+      "msg": "Deposit permit has expired"
+    },
+    {
+      "code": 6008,
+      "name": "WithdrawalsNotEnabled",
+      "msg": "Withdrawals are not enabled yet"
+    },
+    {
+      "code": 6009,
+      "name": "RepayAfterWithdrawalsEnabled",
+      "msg": "Cannot repay after withdrawals have been enabled"
+    },
+    {
+      "code": 6010,
+      "name": "Unauthorized",
+      "msg": "Only the protocol authority can perform this action"
+    },
+    {
+      "code": 6011,
+      "name": "AdminWithdrawExceeded",
+      "msg": "Admin withdraw would exceed total active deposits"
+    },
+    {
+      "code": 6012,
+      "name": "NoRepayToDistribute",
+      "msg": "Cannot enable withdrawals with no repay funds"
+    },
+    {
+      "code": 6013,
+      "name": "NoPendingAuthority",
+      "msg": "No pending authority to accept"
+    },
+    {
+      "code": 6014,
+      "name": "PermitLimitExceeded",
+      "msg": "Cumulative deposit would exceed permit limit"
+    },
+    {
+      "code": 6015,
+      "name": "InvalidMaturity",
+      "msg": "Maturity timestamp must be in the future"
+    }
+  ],
+  "types": [
+    {
+      "name": "DepositPermit",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "docs": [
+              "Pool this permit belongs to"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "docs": [
+              "User allowed to deposit"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "max_amount",
+            "docs": [
+              "Max cumulative deposit amount (0 = unlimited)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "amount_used",
+            "docs": [
+              "Amount already deposited under this permit"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "expires_at",
+            "docs": [
+              "Permit expiry unix timestamp (0 = no expiry)"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "InitPoolParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool_id",
+            "type": "u64"
+          },
+          {
+            "name": "apy_bps",
+            "type": "u16"
+          },
+          {
+            "name": "maturity_ts",
+            "type": "i64"
+          },
+          {
+            "name": "deposit_deadline_offset",
+            "type": "u64"
+          },
+          {
+            "name": "min_deposit_amount",
+            "type": "u64"
+          },
+          {
+            "name": "max_total_deposit",
+            "type": "u64"
+          },
+          {
+            "name": "whitelist_enabled",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "docs": [
+              "Current protocol authority"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_authority",
+            "docs": [
+              "Pending authority awaiting acceptance (two-step transfer)"
+            ],
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdatePoolParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "max_total_deposit",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "min_deposit_amount",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "apy_bps",
+            "type": {
+              "option": "u16"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultPool",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool_id",
+            "docs": [
+              "Pool identifier"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "deposit_vault",
+            "docs": [
+              "Token account PDA for user deposits"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "repay_vault",
+            "docs": [
+              "Token account PDA for admin repayments"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "deposit_mint",
+            "docs": [
+              "USDC mint address"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "yield_mint",
+            "docs": [
+              "Yield token mint PDA (1 yToken = 1 USDC at maturity)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "apy_bps",
+            "docs": [
+              "APY in basis points (e.g. 800 = 8%)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "maturity_ts",
+            "docs": [
+              "Unix timestamp when deposits mature and can be withdrawn"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "deposit_deadline_offset",
+            "docs": [
+              "Seconds before maturity_ts after which deposits are no longer accepted (0 = no restriction)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "min_deposit_amount",
+            "docs": [
+              "Minimum deposit amount (e.g. 100_000_000 = 100 USDC)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "max_total_deposit",
+            "docs": [
+              "Maximum total active deposits (pool cap)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_deposited",
+            "docs": [
+              "Current sum of deposited principal (never decreases)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_expected_return",
+            "docs": [
+              "Total outstanding yield token liability"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_repaid",
+            "docs": [
+              "Total amount repaid by admin into repay_vault (historical, never decreases)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "remaining_repay",
+            "docs": [
+              "Remaining repay balance available for withdrawals (decreases on withdraw)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_admin_withdrawn",
+            "docs": [
+              "Total amount withdrawn by admin from deposit_vault"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "withdrawals_enabled",
+            "docs": [
+              "Whether withdrawals are enabled (set by admin after repay)"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "whitelist_enabled",
+            "docs": [
+              "Whether deposits require a DepositPermit"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "deposit_vault_bump",
+            "docs": [
+              "Deposit vault PDA bump"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "repay_vault_bump",
+            "docs": [
+              "Repay vault PDA bump"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "yield_mint_bump",
+            "docs": [
+              "Yield mint PDA bump"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

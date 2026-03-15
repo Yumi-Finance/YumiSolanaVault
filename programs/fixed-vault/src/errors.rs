@@ -1,0 +1,37 @@
+use anchor_lang::prelude::*;
+
+#[error_code]
+pub enum VaultError {
+    #[msg("Deposit amount is below the minimum")]
+    DepositTooSmall,
+    #[msg("Deposit would exceed the pool cap")]
+    PoolCapExceeded,
+    #[msg("Maturity date has not been reached yet")]
+    MaturityNotReached,
+    #[msg("Deposit deadline has passed")]
+    DepositDeadlinePassed,
+    #[msg("New cap cannot be below current total active deposits")]
+    CapBelowActive,
+    #[msg("Arithmetic overflow")]
+    MathOverflow,
+    #[msg("Deposit requires a valid whitelist permit")]
+    NotWhitelisted,
+    #[msg("Deposit permit has expired")]
+    PermitExpired,
+    #[msg("Withdrawals are not enabled yet")]
+    WithdrawalsNotEnabled,
+    #[msg("Cannot repay after withdrawals have been enabled")]
+    RepayAfterWithdrawalsEnabled,
+    #[msg("Only the protocol authority can perform this action")]
+    Unauthorized,
+    #[msg("Admin withdraw would exceed total active deposits")]
+    AdminWithdrawExceeded,
+    #[msg("Cannot enable withdrawals with no repay funds")]
+    NoRepayToDistribute,
+    #[msg("No pending authority to accept")]
+    NoPendingAuthority,
+    #[msg("Cumulative deposit would exceed permit limit")]
+    PermitLimitExceeded,
+    #[msg("Maturity timestamp must be in the future")]
+    InvalidMaturity,
+}

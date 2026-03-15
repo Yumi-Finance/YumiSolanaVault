@@ -1,0 +1,20 @@
+{
+  "name": "@yumi/vault-sdk",
+  "version": "0.1.0",
+  "description": "SDK for Yumi Solana Fixed-Term Vault contracts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.32.1",
+    "@solana/spl-token": "^0.4.6",
+    "@solana/web3.js": "^1.95.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  },
+  "license": "ISC"
+}
