@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/fixed_vault.json`.
  */
 export type FixedVault = {
-  "address": "1hV5chUTbSWcaGH76TpXq8iCFQrjKPACGF6eD68nT53",
+  "address": "B8b7tz681buonvw7mb6rV5CABPy3fTekETea8tdQj8Kb",
   "metadata": {
     "name": "fixedVault",
     "version": "0.1.0",

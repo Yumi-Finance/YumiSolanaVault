@@ -56,6 +56,8 @@ pub fn handle_withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
 
     // Calculate proportional payout BEFORE burning (supply still includes user's tokens)
     let supply = ctx.accounts.yield_mint.supply;
+    require!(supply > 0, VaultError::MathOverflow);
+    require!(amount <= supply, VaultError::MathOverflow);
     let payout = if amount == supply {
         // Last withdrawer gets everything remaining — avoids rounding dust
         remaining_repay

@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useVaultClient, useNetwork } from "@/components/Providers";
 import { VaultPoolAccount, VaultClient, ProtocolConfigAccount } from "@/lib/client";
 import {
@@ -75,7 +75,32 @@ const POOLS_PER_PAGE = 5;
 /* ---------- Collapsible Pool Row ---------- */
 
 function PoolRow({ pubkey, pool }: { pubkey: PublicKey; pool: VaultPoolAccount }) {
+  const { connection } = useConnection();
   const [expanded, setExpanded] = useState(false);
+  const [repayVaultBalanceRaw, setRepayVaultBalanceRaw] = useState<BN | null>(null);
+
+  useEffect(() => {
+    if (!expanded) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await connection.getTokenAccountBalance(pool.repayVault);
+        if (!cancelled) setRepayVaultBalanceRaw(new BN(res.value.amount));
+      } catch {
+        if (!cancelled) setRepayVaultBalanceRaw(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [expanded, connection, pool.repayVault]);
+
+  /** Реальный остаток USDC = баланс repay_vault (единственный надёжный «сколько осталось»). */
+  const repayMismatch =
+    repayVaultBalanceRaw != null && !repayVaultBalanceRaw.eq(pool.remainingRepay);
+  const remainingLooksLikeTotalRepaid =
+    pool.remainingRepay.eq(pool.totalRepaid) && pool.totalRepaid.gtn(0);
+
   const matured = VaultClient.isMatured(pool.maturityTs);
   const depositOpen = VaultClient.isDepositOpen(pool.maturityTs, pool.depositDeadlineOffset);
   const dtm = daysToMaturity(pool.maturityTs);
@@ -171,19 +196,55 @@ function PoolRow({ pubkey, pool }: { pubkey: PublicKey; pool: VaultPoolAccount }
               <p className="text-zinc-200">{lamportsToUi(pool.totalExpectedReturn, 6)}</p>
             </div>
             <div>
-              <span className="text-zinc-500">Total Repaid</span>
-              <p className="text-zinc-200">{lamportsToUi(pool.totalRepaid, 6)}</p>
-            </div>
-            <div>
               <span className="text-zinc-500">Admin Withdrawn</span>
               <p className="text-zinc-200">{lamportsToUi(pool.totalAdminWithdrawn, 6)}</p>
             </div>
+          </div>
+
+          {/* Repay: остаток = баланс vault; поля пула — отдельно */}
+          <div className="mb-3 rounded-lg border border-emerald-800/50 bg-emerald-950/20 px-3 py-3 space-y-3">
             <div>
-              <span className="text-zinc-500">Remaining Repay</span>
-              <p className={`font-medium ${pool.remainingRepay.gtn(0) ? "text-amber-400" : "text-emerald-400"}`}>
-                {lamportsToUi(pool.remainingRepay, 6)}
+              <p className="text-[10px] uppercase tracking-wide text-emerald-500/90 font-semibold mb-1">
+                Остаток USDC для выводов (реально в Repay Vault)
+              </p>
+              <p className="text-2xl font-mono font-bold text-emerald-400 tabular-nums">
+                {repayVaultBalanceRaw != null
+                  ? `${lamportsToUi(repayVaultBalanceRaw, 6)} USDC`
+                  : "…"}
+              </p>
+              <p className="text-[10px] text-zinc-500 mt-1">
+                Считается по RPC с токен-аккаунта repay_vault — это физически сколько USDC ещё можно раздать.
               </p>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-2 border-t border-zinc-700/80">
+              <div>
+                <span className="text-zinc-500 block">Всего репайнули за всё время (total_repaid)</span>
+                <p className="text-zinc-200 font-mono">{lamportsToUi(pool.totalRepaid, 6)}</p>
+                <p className="text-[10px] text-zinc-600 mt-0.5">
+                  Накопительно, не падает при user withdraw.
+                </p>
+              </div>
+              <div>
+                <span className="text-zinc-500 block">Поле remaining_repay в аккаунте пула</span>
+                <p className="text-zinc-300 font-mono">{lamportsToUi(pool.remainingRepay, 6)}</p>
+                <p className="text-[10px] text-zinc-600 mt-0.5">
+                  Должно уменьшаться при каждом успешном withdraw и совпадать с балансом vault выше.
+                </p>
+              </div>
+            </div>
+            {remainingLooksLikeTotalRepaid && (
+              <p className="text-[10px] text-amber-400/90 leading-relaxed">
+                Сейчас <code className="text-zinc-400">remaining_repay</code> ={" "}
+                <code className="text-zinc-400">total_repaid</code> — так бывает, пока никто не вывел: оба
+                выросли одним repay. Это не «дубль одного и того же смысла»: после выводов remaining должен
+                стать меньше total_repaid.
+              </p>
+            )}
+            {repayMismatch && (
+              <p className="text-[10px] text-red-400 font-medium" role="alert">
+                remaining_repay ≠ баланс vault — withdraw может ломаться (MathOverflow / transfer).
+              </p>
+            )}
           </div>
 
           {/* Addresses */}
@@ -245,6 +306,7 @@ function PoolList({ pools }: { pools: { pubkey: PublicKey; account: VaultPoolAcc
 export default function AdminPage() {
   const client = useVaultClient();
   const { publicKey } = useWallet();
+  const { connection } = useConnection();
   const { network } = useNetwork();
 
   const [config, setConfig] = useState<ProtocolConfigAccount | null>(null);
@@ -432,6 +494,31 @@ export default function AdminPage() {
       return client.send(ix);
     });
   };
+
+  const [rpRepayVaultBal, setRpRepayVaultBal] = useState<BN | null>(null);
+  useEffect(() => {
+    if (!connection || !rpPoolAddr) {
+      setRpRepayVaultBal(null);
+      return;
+    }
+    const acc = pools.find((p) => p.pubkey.toBase58() === rpPoolAddr)?.account;
+    if (!acc) {
+      setRpRepayVaultBal(null);
+      return;
+    }
+    let cancelled = false;
+    connection
+      .getTokenAccountBalance(acc.repayVault)
+      .then((r) => {
+        if (!cancelled) setRpRepayVaultBal(new BN(r.value.amount));
+      })
+      .catch(() => {
+        if (!cancelled) setRpRepayVaultBal(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [connection, rpPoolAddr, pools]);
 
   /* ============ Enable Withdrawals ============ */
   const [ewPoolAddr, setEwPoolAddr] = useState("");
@@ -826,11 +913,48 @@ export default function AdminPage() {
           {(() => {
             const sp = selectedPool(rpPoolAddr);
             if (!sp) return null;
+            const vaultUi = rpRepayVaultBal != null ? lamportsToUi(rpRepayVaultBal, 6) : "…";
+            const vaultPositive = rpRepayVaultBal != null && rpRepayVaultBal.gtn(0);
+            const staleCounter =
+              rpRepayVaultBal != null &&
+              rpRepayVaultBal.isZero() &&
+              sp.remainingRepay.gtn(0);
             return (
-              <div className="bg-zinc-800/40 rounded-lg p-3 text-xs text-zinc-400 grid grid-cols-3 gap-2">
-                <div>Remaining Repay: <span className={`font-medium ${sp.remainingRepay.gtn(0) ? "text-amber-400" : "text-emerald-400"}`}>{lamportsToUi(sp.remainingRepay, 6)}</span></div>
-                <div>Total Repaid: <span className="text-white">{lamportsToUi(sp.totalRepaid, 6)}</span></div>
-                <div>Total Expected Return: <span className="text-white">{lamportsToUi(sp.totalExpectedReturn, 6)}</span></div>
+              <div className="bg-zinc-800/40 rounded-lg p-3 text-xs text-zinc-400 space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <div className="text-zinc-500">USDC в Repay Vault (остаток)</div>
+                    <span
+                      className={`font-semibold text-base tabular-nums ${
+                        vaultPositive ? "text-amber-400" : "text-emerald-400"
+                      }`}
+                    >
+                      {vaultUi}
+                    </span>
+                    <p className="text-[10px] text-zinc-600 mt-0.5">
+                      Сколько USDC реально лежит в vault — это «сколько осталось» для выплат.
+                    </p>
+                  </div>
+                  <div>
+                    <div className="text-zinc-500">Поле remaining_repay (аккаунт пула)</div>
+                    <span className="text-zinc-200 font-mono">{lamportsToUi(sp.remainingRepay, 6)}</span>
+                    <p className="text-[10px] text-zinc-600 mt-0.5">
+                      Уменьшается только после успешного user withdraw; при ошибках withdraw не меняется.
+                    </p>
+                  </div>
+                  <div>
+                    <div className="text-zinc-500">Total repaid / Expected return</div>
+                    <p className="text-zinc-200">
+                      {lamportsToUi(sp.totalRepaid, 6)} / {lamportsToUi(sp.totalExpectedReturn, 6)}
+                    </p>
+                  </div>
+                </div>
+                {staleCounter && (
+                  <p className="text-[10px] text-amber-500/90">
+                    В vault уже 0 USDC, а remaining_repay в аккаунте ещё {lamportsToUi(sp.remainingRepay, 6)} —
+                    значит выводы не прошли по контракту или USDC убрали не через withdraw.
+                  </p>
+                )}
               </div>
             );
           })()}
@@ -866,7 +990,7 @@ export default function AdminPage() {
             return (
               <div className="bg-zinc-800/40 rounded-lg p-3 text-xs text-zinc-400 grid grid-cols-3 gap-2">
                 <div>Status: <span className={sp.withdrawalsEnabled ? "text-emerald-400" : "text-amber-400"}>{sp.withdrawalsEnabled ? "Already enabled" : "Disabled"}</span></div>
-                <div>Remaining Repay: <span className={`font-medium ${sp.remainingRepay.gtn(0) ? "text-amber-400" : "text-emerald-400"}`}>{lamportsToUi(sp.remainingRepay, 6)}</span></div>
+                <div>Remaining for withdrawals: <span className={`font-medium ${sp.remainingRepay.gtn(0) ? "text-amber-400" : "text-emerald-400"}`}>{lamportsToUi(sp.remainingRepay, 6)}</span></div>
                 <div>Matured: <span className={VaultClient.isMatured(sp.maturityTs) ? "text-emerald-400" : "text-zinc-300"}>{VaultClient.isMatured(sp.maturityTs) ? "Yes" : "No"}</span></div>
               </div>
             );

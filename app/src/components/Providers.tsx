@@ -75,7 +75,7 @@ export default function Providers({ children }: { children: ReactNode }) {
   return (
     <NetworkContext.Provider value={{ network, setNetwork }}>
       <ConnectionProvider endpoint={endpoint}>
-        <SolWalletProvider wallets={wallets} autoConnect>
+        <SolWalletProvider wallets={wallets} autoConnect={false}>
           <WalletModalProvider>
             <VaultClientProvider>{children}</VaultClientProvider>
           </WalletModalProvider>
