@@ -17,6 +17,7 @@ export interface UpdatePoolParams {
   maxTotalDeposit: BN | null;
   minDepositAmount: BN | null;
   apyBps: number | null;
+  allowOverpay: boolean | null;
 }
 
 /** On-chain ProtocolConfig account data */
@@ -45,6 +46,7 @@ export interface VaultPoolAccount {
   totalAdminWithdrawn: BN;
   withdrawalsEnabled: boolean;
   whitelistEnabled: boolean;
+  allowOverpay: boolean;
   bump: number;
   depositVaultBump: number;
   repayVaultBump: number;

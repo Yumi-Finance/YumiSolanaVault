@@ -372,6 +372,7 @@ describe("fixed-vault", () => {
           maxTotalDeposit: newMaxDeposit,
           minDepositAmount: null,
           apyBps: 1200,
+          allowOverpay: null,
         })
         .accountsPartial({
           authority: authority.publicKey,
@@ -391,6 +392,7 @@ describe("fixed-vault", () => {
           maxTotalDeposit: null,
           minDepositAmount: null,
           apyBps: APY_BPS,
+          allowOverpay: null,
         })
         .accountsPartial({
           authority: authority.publicKey,
@@ -407,6 +409,7 @@ describe("fixed-vault", () => {
             maxTotalDeposit: new BN(1),
             minDepositAmount: null,
             apyBps: null,
+            allowOverpay: null,
           })
           .accountsPartial({
             authority: authority.publicKey,
@@ -810,6 +813,566 @@ describe("fixed-vault", () => {
       } catch (err: any) {
         expect(err.error.errorCode.code).to.equal("DepositDeadlinePassed");
       }
+    });
+  });
+
+  // ==========================================================================
+  // Tests for M-2 fix: high-decimal mint rejection & init_pool dry-run
+  // ==========================================================================
+  describe("M-2: decimal & overflow guards", () => {
+    it("rejects mint with decimals > 9", async () => {
+      const highDecMint = await createMint(
+        connection,
+        (authority as any).payer,
+        authority.publicKey,
+        null,
+        18 // too high
+      );
+      const hdPoolId = new BN(200);
+      const [hdPoolPda] = getPoolPda(hdPoolId);
+      const [hdDepositVault] = getDepositVaultPda(hdPoolPda);
+      const [hdRepayVault] = getRepayVaultPda(hdPoolPda);
+      const [hdYieldMint] = getYieldMintPda(hdPoolPda);
+
+      try {
+        await program.methods
+          .initPool({
+            poolId: hdPoolId,
+            apyBps: APY_BPS,
+            maturityTs: maturityTs,
+            depositDeadlineOffset: new BN(0),
+            minDepositAmount: MIN_DEPOSIT,
+            maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+            whitelistEnabled: false,
+          })
+          .accountsPartial({
+            authority: authority.publicKey,
+            config: configPda,
+            pool: hdPoolPda,
+            depositMint: highDecMint,
+            depositVault: hdDepositVault,
+            repayVault: hdRepayVault,
+            yieldMint: hdYieldMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        expect(err.error.errorCode.code).to.equal("DecimalsTooHigh");
+      }
+    });
+
+    it("rejects pool where max_total_deposit * apy overflows u64", async () => {
+      const overflowPoolId = new BN(201);
+      const [oPoolPda] = getPoolPda(overflowPoolId);
+      const [oDepositVault] = getDepositVaultPda(oPoolPda);
+      const [oRepayVault] = getRepayVaultPda(oPoolPda);
+      const [oYieldMint] = getYieldMintPda(oPoolPda);
+
+      try {
+        await program.methods
+          .initPool({
+            poolId: overflowPoolId,
+            apyBps: 65535, // max u16
+            maturityTs: maturityTs,
+            depositDeadlineOffset: new BN(0),
+            minDepositAmount: new BN(1),
+            maxTotalDeposit: new BN("18446744073709551615"), // u64::MAX
+            whitelistEnabled: false,
+          })
+          .accountsPartial({
+            authority: authority.publicKey,
+            config: configPda,
+            pool: oPoolPda,
+            depositMint: mint,
+            depositVault: oDepositVault,
+            repayVault: oRepayVault,
+            yieldMint: oYieldMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        expect(err.error.errorCode.code).to.equal("MathOverflow");
+      }
+    });
+
+    it("update_pool dry-run rejects overflow params", async () => {
+      try {
+        await program.methods
+          .updatePool({
+            maxTotalDeposit: new BN("18446744073709551615"),
+            minDepositAmount: null,
+            apyBps: 65535,
+            allowOverpay: null,
+          })
+          .accountsPartial({
+            authority: authority.publicKey,
+            config: configPda,
+            pool: poolPda,
+          })
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        expect(err.error.errorCode.code).to.equal("MathOverflow");
+      }
+    });
+  });
+
+  // ==========================================================================
+  // Tests for L-4 fix: deposit_deadline_offset validation
+  // ==========================================================================
+  describe("L-4: deposit_deadline_offset validation", () => {
+    it("rejects deposit_deadline_offset >= pool duration", async () => {
+      const ddPoolId = new BN(210);
+      const [ddPoolPda] = getPoolPda(ddPoolId);
+      const [ddDepositVault] = getDepositVaultPda(ddPoolPda);
+      const [ddRepayVault] = getRepayVaultPda(ddPoolPda);
+      const [ddYieldMint] = getYieldMintPda(ddPoolPda);
+
+      const slot = await connection.getSlot();
+      const blockTime = await connection.getBlockTime(slot);
+      const shortMaturity = new BN(blockTime! + 60); // 60 seconds from now
+
+      try {
+        await program.methods
+          .initPool({
+            poolId: ddPoolId,
+            apyBps: APY_BPS,
+            maturityTs: shortMaturity,
+            depositDeadlineOffset: new BN(120), // 120 > 60 — past already
+            minDepositAmount: MIN_DEPOSIT,
+            maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+            whitelistEnabled: false,
+          })
+          .accountsPartial({
+            authority: authority.publicKey,
+            config: configPda,
+            pool: ddPoolPda,
+            depositMint: mint,
+            depositVault: ddDepositVault,
+            repayVault: ddRepayVault,
+            yieldMint: ddYieldMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        expect(err.error.errorCode.code).to.equal("InvalidDeadlineOffset");
+      }
+    });
+
+    it("accepts valid deposit_deadline_offset", async () => {
+      const ddPoolId = new BN(211);
+      const [ddPoolPda] = getPoolPda(ddPoolId);
+      const [ddDepositVault] = getDepositVaultPda(ddPoolPda);
+      const [ddRepayVault] = getRepayVaultPda(ddPoolPda);
+      const [ddYieldMint] = getYieldMintPda(ddPoolPda);
+
+      await program.methods
+        .initPool({
+          poolId: ddPoolId,
+          apyBps: APY_BPS,
+          maturityTs: maturityTs, // 90 days away
+          depositDeadlineOffset: new BN(86400), // 1 day before maturity — valid
+          minDepositAmount: MIN_DEPOSIT,
+          maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+          whitelistEnabled: false,
+        })
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: ddPoolPda,
+          depositMint: mint,
+          depositVault: ddDepositVault,
+          repayVault: ddRepayVault,
+          yieldMint: ddYieldMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+
+      const pool = await program.account.vaultPool.fetch(ddPoolPda);
+      expect(pool.depositDeadlineOffset.toNumber()).to.equal(86400);
+    });
+  });
+
+  // ==========================================================================
+  // Tests for M-1 fix: zero withdraw, repay cap, overpay + NoRepayToDistribute
+  // ==========================================================================
+  describe("M-1: zero withdrawal & repay cap", () => {
+    let m1PoolPda: PublicKey;
+    let m1DepositVaultPda: PublicKey;
+    let m1RepayVaultPda: PublicKey;
+    let m1YieldMintPda: PublicKey;
+    let m1Mint: PublicKey;
+    let m1AdminTokenAccount: PublicKey;
+    let m1UserTokenAccount: PublicKey;
+    let m1UserYieldAccount: PublicKey;
+
+    const M1_POOL_ID = new BN(300);
+
+    before(async () => {
+      m1Mint = await createMint(connection, (authority as any).payer, authority.publicKey, null, 6);
+
+      [m1PoolPda] = getPoolPda(M1_POOL_ID);
+      [m1DepositVaultPda] = getDepositVaultPda(m1PoolPda);
+      [m1RepayVaultPda] = getRepayVaultPda(m1PoolPda);
+      [m1YieldMintPda] = getYieldMintPda(m1PoolPda);
+
+      m1AdminTokenAccount = await createAccount(connection, (authority as any).payer, m1Mint, authority.publicKey);
+      await mintTo(connection, (authority as any).payer, m1Mint, m1AdminTokenAccount, authority.publicKey, 10_000_000_000);
+
+      m1UserTokenAccount = await createAccount(connection, userKeypair, m1Mint, userKeypair.publicKey);
+      await mintTo(connection, (authority as any).payer, m1Mint, m1UserTokenAccount, authority.publicKey, 5_000_000_000);
+
+      const slot = await connection.getSlot();
+      const blockTime = await connection.getBlockTime(slot);
+      const m1MaturityTs = new BN(blockTime! + 3);
+
+      await program.methods
+        .initPool({
+          poolId: M1_POOL_ID,
+          apyBps: APY_BPS,
+          maturityTs: m1MaturityTs,
+          depositDeadlineOffset: new BN(0),
+          minDepositAmount: MIN_DEPOSIT,
+          maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+          whitelistEnabled: false,
+        })
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: m1PoolPda,
+          depositMint: m1Mint,
+          depositVault: m1DepositVaultPda,
+          repayVault: m1RepayVaultPda,
+          yieldMint: m1YieldMintPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+
+      m1UserYieldAccount = await createAccount(connection, userKeypair, m1YieldMintPda, userKeypair.publicKey);
+
+      // Deposit
+      await program.methods
+        .deposit(DEPOSIT_AMOUNT)
+        .accountsPartial({
+          user: userKeypair.publicKey,
+          pool: m1PoolPda,
+          userTokenAccount: m1UserTokenAccount,
+          depositVault: m1DepositVaultPda,
+          yieldMint: m1YieldMintPda,
+          userYieldAccount: m1UserYieldAccount,
+          permit: null,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([userKeypair])
+        .rpc();
+    });
+
+    it("rejects repay when total_expected_return == 0 (empty pool)", async () => {
+      const emptyPoolId = new BN(301);
+      const [emptyPoolPda] = getPoolPda(emptyPoolId);
+      const [emptyDV] = getDepositVaultPda(emptyPoolPda);
+      const [emptyRV] = getRepayVaultPda(emptyPoolPda);
+      const [emptyYM] = getYieldMintPda(emptyPoolPda);
+
+      await program.methods
+        .initPool({
+          poolId: emptyPoolId,
+          apyBps: APY_BPS,
+          maturityTs: maturityTs,
+          depositDeadlineOffset: new BN(0),
+          minDepositAmount: MIN_DEPOSIT,
+          maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+          whitelistEnabled: false,
+        })
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: emptyPoolPda,
+          depositMint: mint,
+          depositVault: emptyDV,
+          repayVault: emptyRV,
+          yieldMint: emptyYM,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+
+      try {
+        await program.methods
+          .repay(new BN(1_000_000))
+          .accountsPartial({
+            authority: authority.publicKey,
+            config: configPda,
+            pool: emptyPoolPda,
+            adminTokenAccount: adminTokenAccount,
+            repayVault: emptyRV,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        expect(err.error.errorCode.code).to.equal("NoRepayToDistribute");
+      }
+    });
+
+    it("rejects repay exceeding total_expected_return", async () => {
+      const pool = await program.account.vaultPool.fetch(m1PoolPda);
+      const overAmount = pool.totalExpectedReturn.add(new BN(1));
+
+      try {
+        await program.methods
+          .repay(overAmount)
+          .accountsPartial({
+            authority: authority.publicKey,
+            config: configPda,
+            pool: m1PoolPda,
+            adminTokenAccount: m1AdminTokenAccount,
+            repayVault: m1RepayVaultPda,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        expect(err.error.errorCode.code).to.equal("RepayExceedsCap");
+      }
+    });
+
+    it("allows repay up to total_expected_return", async () => {
+      const pool = await program.account.vaultPool.fetch(m1PoolPda);
+      const exactAmount = pool.totalExpectedReturn;
+
+      await program.methods
+        .repay(exactAmount)
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: m1PoolPda,
+          adminTokenAccount: m1AdminTokenAccount,
+          repayVault: m1RepayVaultPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+
+      const poolAfter = await program.account.vaultPool.fetch(m1PoolPda);
+      expect(poolAfter.totalRepaid.toNumber()).to.equal(exactAmount.toNumber());
+    });
+
+    it("rejects zero withdrawal", async () => {
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+
+      await program.methods
+        .enableWithdrawals()
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: m1PoolPda,
+        })
+        .rpc();
+
+      const attackerKeypair = Keypair.generate();
+      const sig = await connection.requestAirdrop(attackerKeypair.publicKey, 2_000_000_000);
+      await connection.confirmTransaction(sig);
+
+      const attackerYieldAccount = await createAccount(
+        connection,
+        attackerKeypair,
+        m1YieldMintPda,
+        attackerKeypair.publicKey
+      );
+
+      const attackerTokenAccount = await createAccount(
+        connection,
+        attackerKeypair,
+        m1Mint,
+        attackerKeypair.publicKey
+      );
+
+      try {
+        await program.methods
+          .withdraw(new BN(0))
+          .accountsPartial({
+            user: attackerKeypair.publicKey,
+            pool: m1PoolPda,
+            yieldMint: m1YieldMintPda,
+            userYieldAccount: attackerYieldAccount,
+            repayVault: m1RepayVaultPda,
+            userTokenAccount: attackerTokenAccount,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .signers([attackerKeypair])
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        expect(err.error.errorCode.code).to.equal("WithdrawalTooSmall");
+      }
+    });
+  });
+
+  // ==========================================================================
+  // Tests for allow_overpay flag
+  // ==========================================================================
+  describe("allow_overpay", () => {
+    let opPoolPda: PublicKey;
+    let opDepositVaultPda: PublicKey;
+    let opRepayVaultPda: PublicKey;
+    let opYieldMintPda: PublicKey;
+    let opMint: PublicKey;
+    let opAdminTokenAccount: PublicKey;
+    let opUserTokenAccount: PublicKey;
+    let opUserYieldAccount: PublicKey;
+
+    const OP_POOL_ID = new BN(400);
+
+    before(async () => {
+      opMint = await createMint(connection, (authority as any).payer, authority.publicKey, null, 6);
+
+      [opPoolPda] = getPoolPda(OP_POOL_ID);
+      [opDepositVaultPda] = getDepositVaultPda(opPoolPda);
+      [opRepayVaultPda] = getRepayVaultPda(opPoolPda);
+      [opYieldMintPda] = getYieldMintPda(opPoolPda);
+
+      opAdminTokenAccount = await createAccount(connection, (authority as any).payer, opMint, authority.publicKey);
+      await mintTo(connection, (authority as any).payer, opMint, opAdminTokenAccount, authority.publicKey, 10_000_000_000);
+
+      opUserTokenAccount = await createAccount(connection, userKeypair, opMint, userKeypair.publicKey);
+      await mintTo(connection, (authority as any).payer, opMint, opUserTokenAccount, authority.publicKey, 5_000_000_000);
+
+      await program.methods
+        .initPool({
+          poolId: OP_POOL_ID,
+          apyBps: APY_BPS,
+          maturityTs: maturityTs,
+          depositDeadlineOffset: new BN(0),
+          minDepositAmount: MIN_DEPOSIT,
+          maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+          whitelistEnabled: false,
+        })
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: opPoolPda,
+          depositMint: opMint,
+          depositVault: opDepositVaultPda,
+          repayVault: opRepayVaultPda,
+          yieldMint: opYieldMintPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+
+      opUserYieldAccount = await createAccount(connection, userKeypair, opYieldMintPda, userKeypair.publicKey);
+
+      await program.methods
+        .deposit(DEPOSIT_AMOUNT)
+        .accountsPartial({
+          user: userKeypair.publicKey,
+          pool: opPoolPda,
+          userTokenAccount: opUserTokenAccount,
+          depositVault: opDepositVaultPda,
+          yieldMint: opYieldMintPda,
+          userYieldAccount: opUserYieldAccount,
+          permit: null,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([userKeypair])
+        .rpc();
+    });
+
+    it("pool starts with allowOverpay = false", async () => {
+      const pool = await program.account.vaultPool.fetch(opPoolPda);
+      expect(pool.allowOverpay).to.equal(false);
+    });
+
+    it("repay exceeding cap fails while allowOverpay = false", async () => {
+      const pool = await program.account.vaultPool.fetch(opPoolPda);
+      const overAmount = pool.totalExpectedReturn.add(new BN(1));
+
+      try {
+        await program.methods
+          .repay(overAmount)
+          .accountsPartial({
+            authority: authority.publicKey,
+            config: configPda,
+            pool: opPoolPda,
+            adminTokenAccount: opAdminTokenAccount,
+            repayVault: opRepayVaultPda,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        expect(err.error.errorCode.code).to.equal("RepayExceedsCap");
+      }
+    });
+
+    it("enables allowOverpay via updatePool", async () => {
+      await program.methods
+        .updatePool({
+          maxTotalDeposit: null,
+          minDepositAmount: null,
+          apyBps: null,
+          allowOverpay: true,
+        })
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: opPoolPda,
+        })
+        .rpc();
+
+      const pool = await program.account.vaultPool.fetch(opPoolPda);
+      expect(pool.allowOverpay).to.equal(true);
+    });
+
+    it("cannot revoke allowOverpay once enabled", async () => {
+      try {
+        await program.methods
+          .updatePool({
+            maxTotalDeposit: null,
+            minDepositAmount: null,
+            apyBps: null,
+            allowOverpay: false,
+          })
+          .accountsPartial({
+            authority: authority.publicKey,
+            config: configPda,
+            pool: opPoolPda,
+          })
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        expect(err.error.errorCode.code).to.equal("CannotRevokeOverpay");
+      }
+    });
+
+    it("repay exceeding cap succeeds after allowOverpay enabled", async () => {
+      const pool = await program.account.vaultPool.fetch(opPoolPda);
+      const overAmount = pool.totalExpectedReturn.add(new BN(1));
+
+      await program.methods
+        .repay(overAmount)
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: opPoolPda,
+          adminTokenAccount: opAdminTokenAccount,
+          repayVault: opRepayVaultPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+
+      const poolAfter = await program.account.vaultPool.fetch(opPoolPda);
+      expect(poolAfter.totalRepaid.toNumber()).to.be.greaterThan(
+        poolAfter.totalExpectedReturn.toNumber()
+      );
     });
   });
 });

@@ -971,6 +971,31 @@
       "code": 6015,
       "name": "InvalidMaturity",
       "msg": "Maturity timestamp must be in the future"
+    },
+    {
+      "code": 6016,
+      "name": "DecimalsTooHigh",
+      "msg": "Deposit mint decimals must be <= 9"
+    },
+    {
+      "code": 6017,
+      "name": "InvalidDeadlineOffset",
+      "msg": "Deposit deadline offset must be less than pool duration"
+    },
+    {
+      "code": 6018,
+      "name": "WithdrawalTooSmall",
+      "msg": "Withdrawal amount must be greater than zero"
+    },
+    {
+      "code": 6019,
+      "name": "RepayExceedsCap",
+      "msg": "Repay amount would exceed total expected return"
+    },
+    {
+      "code": 6020,
+      "name": "CannotRevokeOverpay",
+      "msg": "allow_overpay flag cannot be revoked once enabled"
     }
   ],
   "types": [
@@ -1113,6 +1138,12 @@
             "type": {
               "option": "u16"
             }
+          },
+          {
+            "name": "allow_overpay",
+            "type": {
+              "option": "bool"
+            }
           }
         ]
       }
@@ -1238,6 +1269,13 @@
             "name": "whitelist_enabled",
             "docs": [
               "Whether deposits require a DepositPermit"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "allow_overpay",
+            "docs": [
+              "Allow repay amounts exceeding total_expected_return (e.g. goodwill bonus)"
             ],
             "type": "bool"
           },

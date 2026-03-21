@@ -977,6 +977,31 @@ export type FixedVault = {
       "code": 6015,
       "name": "invalidMaturity",
       "msg": "Maturity timestamp must be in the future"
+    },
+    {
+      "code": 6016,
+      "name": "decimalsTooHigh",
+      "msg": "Deposit mint decimals must be <= 9"
+    },
+    {
+      "code": 6017,
+      "name": "invalidDeadlineOffset",
+      "msg": "Deposit deadline offset must be less than pool duration"
+    },
+    {
+      "code": 6018,
+      "name": "withdrawalTooSmall",
+      "msg": "Withdrawal amount must be greater than zero"
+    },
+    {
+      "code": 6019,
+      "name": "repayExceedsCap",
+      "msg": "Repay amount would exceed total expected return"
+    },
+    {
+      "code": 6020,
+      "name": "cannotRevokeOverpay",
+      "msg": "allow_overpay flag cannot be revoked once enabled"
     }
   ],
   "types": [
@@ -1119,6 +1144,12 @@ export type FixedVault = {
             "type": {
               "option": "u16"
             }
+          },
+          {
+            "name": "allowOverpay",
+            "type": {
+              "option": "bool"
+            }
           }
         ]
       }
@@ -1244,6 +1275,13 @@ export type FixedVault = {
             "name": "whitelistEnabled",
             "docs": [
               "Whether deposits require a DepositPermit"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "allowOverpay",
+            "docs": [
+              "Allow repay amounts exceeding total_expected_return (e.g. goodwill bonus)"
             ],
             "type": "bool"
           },

@@ -125,6 +125,9 @@ function PoolRow({ pubkey, pool }: { pubkey: PublicKey; pool: VaultPoolAccount }
           {pool.whitelistEnabled && (
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-900/60 text-violet-400">WL</span>
           )}
+          {pool.allowOverpay && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-900/60 text-amber-400">Overpay</span>
+          )}
           <span className="text-zinc-500 text-sm ml-1">{expanded ? "−" : "+"}</span>
         </div>
       </button>
@@ -374,6 +377,7 @@ export default function AdminPage() {
   const [upApyBps, setUpApyBps] = useState("");
   const [upMinDeposit, setUpMinDeposit] = useState("");
   const [upMaxDeposit, setUpMaxDeposit] = useState("");
+  const [upAllowOverpay, setUpAllowOverpay] = useState(false);
 
   const handleUpdatePool = () => {
     if (!client || !publicKey || !upPoolAddr) return;
@@ -389,6 +393,7 @@ export default function AdminPage() {
           maxTotalDeposit: upMaxDeposit
             ? new BN(Math.floor(parseFloat(upMaxDeposit) * 1e6))
             : null,
+          allowOverpay: upAllowOverpay ? true : null,
         }
       );
       return client.send(ix);
@@ -768,6 +773,14 @@ export default function AdminPage() {
                 onChange={(e) => setUpMaxDeposit(e.target.value)}
               />
             </Field>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={upAllowOverpay}
+                onChange={(e) => setUpAllowOverpay(e.target.checked)}
+              />
+              Allow overpay (irreversible)
+            </label>
           </div>
           <button
             onClick={handleUpdatePool}
