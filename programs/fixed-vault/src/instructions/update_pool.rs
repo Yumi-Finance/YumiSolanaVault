@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use crate::errors::VaultError;
 use crate::math::calc_expected_return;
 use crate::state::{ProtocolConfig, VaultPool};
+use crate::MAX_APY_BPS;
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct UpdatePoolParams {
@@ -41,6 +42,7 @@ pub fn handle_update_pool(ctx: Context<UpdatePool>, params: UpdatePoolParams) ->
         pool.min_deposit_amount = min_deposit_amount;
     }
     if let Some(apy_bps) = params.apy_bps {
+        require!(apy_bps <= MAX_APY_BPS, VaultError::ApyTooHigh);
         pool.apy_bps = apy_bps;
     }
     if let Some(allow_overpay) = params.allow_overpay {

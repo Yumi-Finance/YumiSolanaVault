@@ -1075,6 +1075,11 @@
       "code": 6023,
       "name": "NoRepayRemaining",
       "msg": "No repay funds remaining for withdrawal"
+    },
+    {
+      "code": 6024,
+      "name": "ApyTooHigh",
+      "msg": "APY exceeds maximum allowed basis points (4000 bps = 40%)"
     }
   ],
   "types": [

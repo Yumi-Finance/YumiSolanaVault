@@ -1081,6 +1081,11 @@ export type FixedVault = {
       "code": 6023,
       "name": "noRepayRemaining",
       "msg": "No repay funds remaining for withdrawal"
+    },
+    {
+      "code": 6024,
+      "name": "apyTooHigh",
+      "msg": "APY exceeds maximum allowed basis points (4000 bps = 40%)"
     }
   ],
   "types": [

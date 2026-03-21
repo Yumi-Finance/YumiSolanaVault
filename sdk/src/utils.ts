@@ -5,6 +5,9 @@ import { VaultPoolAccount } from "./types";
 /** Grace period after maturity before admin can sweep orphaned repay funds (180 days in seconds). */
 export const SWEEP_GRACE_SECONDS = 180 * 24 * 3600;
 
+/** Maximum allowed APY in basis points (4000 bps = 40%). */
+export const MAX_APY_BPS = 4000;
+
 /** Format a BN amount (in smallest units) to a human-readable decimal string. */
 export function lamportsToUi(val: BN, decimals: number): string {
   const s = val.toString().padStart(decimals + 1, "0");

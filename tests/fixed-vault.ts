@@ -937,7 +937,8 @@ describe("fixed-vault", () => {
           .rpc();
         expect.fail("should have failed");
       } catch (err: any) {
-        expect(err.error.errorCode.code).to.equal("MathOverflow");
+        // ApyTooHigh fires before MathOverflow now that we have the APY cap guard
+        expect(["MathOverflow", "ApyTooHigh"]).to.include(err.error.errorCode.code);
       }
     });
 
@@ -958,7 +959,8 @@ describe("fixed-vault", () => {
           .rpc();
         expect.fail("should have failed");
       } catch (err: any) {
-        expect(err.error.errorCode.code).to.equal("MathOverflow");
+        // ApyTooHigh fires before MathOverflow now that we have the APY cap guard
+        expect(["MathOverflow", "ApyTooHigh"]).to.include(err.error.errorCode.code);
       }
     });
   });
@@ -1607,6 +1609,108 @@ describe("fixed-vault", () => {
       expect(poolAfter.totalRepaid.toNumber()).to.be.greaterThan(
         poolAfter.totalExpectedReturn.toNumber()
       );
+    });
+  });
+
+  // ==========================================================================
+  // Tests for L-6 fix: APY upper bound validation (MAX_APY_BPS = 4000)
+  // ==========================================================================
+  describe("L-6: APY upper bound", () => {
+    const L6_POOL_ID = new BN(600);
+    const L6_POOL_ID_2 = new BN(601);
+
+    it("rejects apy_bps above cap in init_pool", async () => {
+      const [l6PoolPda] = getPoolPda(L6_POOL_ID);
+      const [l6DepositVault] = getDepositVaultPda(l6PoolPda);
+      const [l6RepayVault] = getRepayVaultPda(l6PoolPda);
+      const [l6YieldMint] = getYieldMintPda(l6PoolPda);
+
+      const slot = await connection.getSlot();
+      const blockTime = await connection.getBlockTime(slot);
+      const futureMaturity = new BN(blockTime! + 86400);
+
+      try {
+        await program.methods
+          .initPool({
+            poolId: L6_POOL_ID,
+            apyBps: 4001, // one above MAX_APY_BPS
+            maturityTs: futureMaturity,
+            depositDeadlineOffset: new BN(0),
+            minDepositAmount: MIN_DEPOSIT,
+            maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+            whitelistEnabled: false,
+          })
+          .accountsPartial({
+            authority: authority.publicKey,
+            config: configPda,
+            pool: l6PoolPda,
+            depositMint: mint,
+            depositVault: l6DepositVault,
+            repayVault: l6RepayVault,
+            yieldMint: l6YieldMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        expect(err.error.errorCode.code).to.equal("ApyTooHigh");
+      }
+    });
+
+    it("accepts apy_bps at cap (4000) in init_pool", async () => {
+      const [l6PoolPda] = getPoolPda(L6_POOL_ID_2);
+      const [l6DepositVault] = getDepositVaultPda(l6PoolPda);
+      const [l6RepayVault] = getRepayVaultPda(l6PoolPda);
+      const [l6YieldMint] = getYieldMintPda(l6PoolPda);
+
+      const slot = await connection.getSlot();
+      const blockTime = await connection.getBlockTime(slot);
+      const futureMaturity = new BN(blockTime! + 86400);
+
+      await program.methods
+        .initPool({
+          poolId: L6_POOL_ID_2,
+          apyBps: 4000, // exactly MAX_APY_BPS — should succeed
+          maturityTs: futureMaturity,
+          depositDeadlineOffset: new BN(0),
+          minDepositAmount: MIN_DEPOSIT,
+          maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+          whitelistEnabled: false,
+        })
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: l6PoolPda,
+          depositMint: mint,
+          depositVault: l6DepositVault,
+          repayVault: l6RepayVault,
+          yieldMint: l6YieldMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+
+      const pool = await program.account.vaultPool.fetch(l6PoolPda);
+      expect(pool.apyBps).to.equal(4000);
+    });
+
+    it("rejects apy_bps above cap in update_pool", async () => {
+      const [l6PoolPda] = getPoolPda(L6_POOL_ID_2);
+
+      try {
+        await program.methods
+          .updatePool({ apyBps: 4001, maxTotalDeposit: null, minDepositAmount: null, allowOverpay: null })
+          .accountsPartial({
+            authority: authority.publicKey,
+            config: configPda,
+            pool: l6PoolPda,
+          })
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        expect(err.error.errorCode.code).to.equal("ApyTooHigh");
+      }
     });
   });
 });

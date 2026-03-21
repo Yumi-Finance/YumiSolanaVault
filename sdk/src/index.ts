@@ -27,5 +27,6 @@ export {
   userExpectedReturn,
   apyBpsToPercent,
   SWEEP_GRACE_SECONDS,
+  MAX_APY_BPS,
 } from "./utils";
 export type { FixedVault } from "./idl";

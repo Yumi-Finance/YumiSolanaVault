@@ -11,6 +11,9 @@ declare_id!("1hV5chUTbSWcaGH76TpXq8iCFQrjKPACGF6eD68nT53");
 
 pub const BOOTSTRAP_AUTHORITY: Pubkey = pubkey!("33Qc8SgCsHVoNgb75CKmSHkp63jiMTqJiZrBfznhcPwx");
 
+/// Maximum allowed APY in basis points (4000 bps = 40%)
+pub const MAX_APY_BPS: u16 = 4000;
+
 #[program]
 pub mod fixed_vault {
     use super::*;

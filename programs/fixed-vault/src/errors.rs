@@ -50,4 +50,6 @@ pub enum VaultError {
     NothingToSweep,
     #[msg("No repay funds remaining for withdrawal")]
     NoRepayRemaining,
+    #[msg("APY exceeds maximum allowed basis points (4000 bps = 40%)")]
+    ApyTooHigh,
 }
