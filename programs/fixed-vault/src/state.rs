@@ -48,6 +48,8 @@ pub struct VaultPool {
     pub withdrawals_enabled: bool,
     /// Whether deposits require a DepositPermit
     pub whitelist_enabled: bool,
+    /// Allow repay amounts exceeding total_expected_return (e.g. goodwill bonus)
+    pub allow_overpay: bool,
     /// PDA bump
     pub bump: u8,
     /// Deposit vault PDA bump

@@ -38,4 +38,10 @@ pub enum VaultError {
     DecimalsTooHigh,
     #[msg("Deposit deadline offset must be less than pool duration")]
     InvalidDeadlineOffset,
+    #[msg("Withdrawal amount must be greater than zero")]
+    WithdrawalTooSmall,
+    #[msg("Repay amount would exceed total expected return")]
+    RepayExceedsCap,
+    #[msg("allow_overpay flag cannot be revoked once enabled")]
+    CannotRevokeOverpay,
 }

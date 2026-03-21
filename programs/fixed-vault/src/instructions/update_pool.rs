@@ -9,6 +9,7 @@ pub struct UpdatePoolParams {
     pub max_total_deposit: Option<u64>,
     pub min_deposit_amount: Option<u64>,
     pub apy_bps: Option<u16>,
+    pub allow_overpay: Option<bool>,
 }
 
 #[derive(Accounts)]
@@ -41,6 +42,11 @@ pub fn handle_update_pool(ctx: Context<UpdatePool>, params: UpdatePoolParams) ->
     }
     if let Some(apy_bps) = params.apy_bps {
         pool.apy_bps = apy_bps;
+    }
+    if let Some(allow_overpay) = params.allow_overpay {
+        // allow_overpay is a one-way flag — once enabled it cannot be revoked.
+        require!(allow_overpay || !pool.allow_overpay, VaultError::CannotRevokeOverpay);
+        pool.allow_overpay = allow_overpay;
     }
 
     // Dry-run worst-case yield computation after any change to cap or APY.

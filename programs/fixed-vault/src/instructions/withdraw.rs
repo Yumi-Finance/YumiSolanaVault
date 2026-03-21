@@ -46,6 +46,7 @@ pub struct Withdraw<'info> {
 }
 
 pub fn handle_withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
+    require!(amount > 0, VaultError::WithdrawalTooSmall);
     let clock = Clock::get()?;
     require!(clock.unix_timestamp >= ctx.accounts.pool.maturity_ts, VaultError::MaturityNotReached);
     require!(ctx.accounts.pool.withdrawals_enabled, VaultError::WithdrawalsNotEnabled);

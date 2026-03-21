@@ -40,6 +40,14 @@ pub struct Repay<'info> {
 
 pub fn handle_repay(ctx: Context<Repay>, amount: u64) -> Result<()> {
     require!(!ctx.accounts.pool.withdrawals_enabled, VaultError::RepayAfterWithdrawalsEnabled);
+    require!(ctx.accounts.pool.total_expected_return > 0, VaultError::NoRepayToDistribute);
+    if !ctx.accounts.pool.allow_overpay {
+        require!(
+            ctx.accounts.pool.total_repaid.checked_add(amount).ok_or(VaultError::MathOverflow)?
+                <= ctx.accounts.pool.total_expected_return,
+            VaultError::RepayExceedsCap
+        );
+    }
 
     token::transfer(
         CpiContext::new(

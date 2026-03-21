@@ -120,6 +120,7 @@ pub fn handle_init_pool(ctx: Context<InitPool>, params: InitPoolParams) -> Resul
     pool.total_admin_withdrawn = 0;
     pool.withdrawals_enabled = false;
     pool.whitelist_enabled = params.whitelist_enabled;
+    pool.allow_overpay = false;
     pool.bump = ctx.bumps.pool;
     pool.deposit_vault_bump = ctx.bumps.deposit_vault;
     pool.repay_vault_bump = ctx.bumps.repay_vault;
