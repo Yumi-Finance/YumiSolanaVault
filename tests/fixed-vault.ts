@@ -539,6 +539,27 @@ describe("fixed-vault", () => {
       const permitAccount = await connection.getAccountInfo(permitPda);
       expect(permitAccount).to.be.null;
     });
+
+    it("rejects permit with expired expires_at", async () => {
+      const expiredUser = Keypair.generate();
+      const [expiredPermitPda] = getPermitPda(wlPoolPda, expiredUser.publicKey);
+
+      try {
+        await program.methods
+          .grantPermit(expiredUser.publicKey, new BN(0), new BN(1)) // expires_at = 1 (far in the past)
+          .accountsPartial({
+            authority: authority.publicKey,
+            config: configPda,
+            pool: wlPoolPda,
+            permit: expiredPermitPda,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        expect(err.error.errorCode.code).to.equal("PermitExpired");
+      }
+    });
   });
 
   describe("multiple pools", () => {

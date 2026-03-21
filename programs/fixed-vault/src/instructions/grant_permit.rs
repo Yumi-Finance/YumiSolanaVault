@@ -39,6 +39,9 @@ pub fn handle_grant_permit(
     max_amount: u64,
     expires_at: i64,
 ) -> Result<()> {
+    let now = Clock::get()?.unix_timestamp;
+    require!(expires_at == 0 || expires_at > now, VaultError::PermitExpired);
+
     let permit = &mut ctx.accounts.permit;
     permit.pool = ctx.accounts.pool.key();
     permit.user = user;
