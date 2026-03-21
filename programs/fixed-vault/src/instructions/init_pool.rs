@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::errors::VaultError;
+use crate::math::calc_expected_return;
 use crate::state::{ProtocolConfig, VaultPool};
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
@@ -75,6 +76,31 @@ pub struct InitPool<'info> {
 pub fn handle_init_pool(ctx: Context<InitPool>, params: InitPoolParams) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     require!(params.maturity_ts > now, VaultError::InvalidMaturity);
+
+    // Reject high-decimal mints — they cause silent u64 truncation in yield calc
+    require!(
+        ctx.accounts.deposit_mint.decimals <= 9,
+        VaultError::DecimalsTooHigh
+    );
+
+    // Dry-run worst-case yield computation: depositing full cap at pool open.
+    // If this overflows u64, the admin must lower max_total_deposit or apy_bps.
+    let duration_secs = params
+        .maturity_ts
+        .checked_sub(now)
+        .ok_or(VaultError::MathOverflow)? as u64;
+    calc_expected_return(params.max_total_deposit, params.apy_bps, duration_secs)?;
+
+    // Ensure deposit_deadline_offset fits in i64 — used as i64 in handle_deposit.
+    // Values > i64::MAX would wrap negative, silently disabling the deadline.
+    i64::try_from(params.deposit_deadline_offset).map_err(|_| error!(VaultError::MathOverflow))?;
+
+    // Ensure the deadline hasn't already passed at pool creation time.
+    // offset must be < duration so that maturity_ts - offset > now.
+    require!(
+        params.deposit_deadline_offset < duration_secs,
+        VaultError::InvalidDeadlineOffset
+    );
 
     let pool = &mut ctx.accounts.pool;
     pool.pool_id = params.pool_id;

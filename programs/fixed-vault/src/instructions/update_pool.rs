@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::VaultError;
+use crate::math::calc_expected_return;
 use crate::state::{ProtocolConfig, VaultPool};
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
@@ -41,6 +42,12 @@ pub fn handle_update_pool(ctx: Context<UpdatePool>, params: UpdatePoolParams) ->
     if let Some(apy_bps) = params.apy_bps {
         pool.apy_bps = apy_bps;
     }
+
+    // Dry-run worst-case yield computation after any change to cap or APY.
+    // Ensures no individual deposit can ever cause a u64 overflow in calc_expected_return.
+    let now = Clock::get()?.unix_timestamp;
+    let duration_secs = pool.maturity_ts.saturating_sub(now).max(0) as u64;
+    calc_expected_return(pool.max_total_deposit, pool.apy_bps, duration_secs)?;
 
     Ok(())
 }

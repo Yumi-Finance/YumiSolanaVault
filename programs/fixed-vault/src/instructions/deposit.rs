@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 
 use crate::errors::VaultError;
+use crate::math::calc_expected_return;
 use crate::state::{DepositPermit, VaultPool};
 
 #[derive(Accounts)]
@@ -147,16 +148,4 @@ pub fn handle_deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
     Ok(())
 }
 
-fn calc_expected_return(amount: u64, apy_bps: u16, duration_secs: u64) -> Result<u64> {
-    let interest = (amount as u128)
-        .checked_mul(apy_bps as u128)
-        .ok_or(VaultError::MathOverflow)?
-        .checked_mul(duration_secs as u128)
-        .ok_or(VaultError::MathOverflow)?
-        .checked_div(315_360_000_000u128) // 10_000 * 365 * 24 * 3600
-        .ok_or(VaultError::MathOverflow)?;
-    let total = (amount as u128)
-        .checked_add(interest)
-        .ok_or(VaultError::MathOverflow)?;
-    Ok(total as u64)
-}
+

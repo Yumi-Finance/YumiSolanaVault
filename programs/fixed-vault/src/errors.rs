@@ -34,4 +34,8 @@ pub enum VaultError {
     PermitLimitExceeded,
     #[msg("Maturity timestamp must be in the future")]
     InvalidMaturity,
+    #[msg("Deposit mint decimals must be <= 9")]
+    DecimalsTooHigh,
+    #[msg("Deposit deadline offset must be less than pool duration")]
+    InvalidDeadlineOffset,
 }
