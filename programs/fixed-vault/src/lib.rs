@@ -67,4 +67,8 @@ pub mod fixed_vault {
     pub fn enable_withdrawals(ctx: Context<EnableWithdrawals>) -> Result<()> {
         instructions::enable_withdrawals::handle_enable_withdrawals(ctx)
     }
+
+    pub fn sweep_repay_vault(ctx: Context<SweepRepayVault>) -> Result<()> {
+        instructions::sweep_repay_vault::handle_sweep_repay_vault(ctx)
+    }
 }

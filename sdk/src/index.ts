@@ -26,5 +26,6 @@ export {
   depositDeadlineTs,
   userExpectedReturn,
   apyBpsToPercent,
+  SWEEP_GRACE_SECONDS,
 } from "./utils";
 export type { FixedVault } from "./idl";

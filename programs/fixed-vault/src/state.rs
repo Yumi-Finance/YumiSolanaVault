@@ -50,6 +50,8 @@ pub struct VaultPool {
     pub whitelist_enabled: bool,
     /// Allow repay amounts exceeding total_expected_return (e.g. goodwill bonus)
     pub allow_overpay: bool,
+    /// Total amount swept by admin from repay_vault after grace period (orphaned funds)
+    pub total_swept: u64,
     /// PDA bump
     pub bump: u8,
     /// Deposit vault PDA bump

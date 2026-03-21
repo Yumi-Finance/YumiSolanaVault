@@ -2,6 +2,9 @@ import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 import { VaultPoolAccount } from "./types";
 
+/** Grace period after maturity before admin can sweep orphaned repay funds (180 days in seconds). */
+export const SWEEP_GRACE_SECONDS = 180 * 24 * 3600;
+
 /** Format a BN amount (in smallest units) to a human-readable decimal string. */
 export function lamportsToUi(val: BN, decimals: number): string {
   const s = val.toString().padStart(decimals + 1, "0");

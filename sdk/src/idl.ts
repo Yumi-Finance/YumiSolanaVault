@@ -746,6 +746,70 @@ export type FixedVault = {
       "args": []
     },
     {
+      "name": "sweepRepayVault",
+      "discriminator": [
+        193,
+        28,
+        190,
+        50,
+        16,
+        108,
+        22,
+        7
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "repayVault",
+          "writable": true
+        },
+        {
+          "name": "adminTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "updatePool",
       "discriminator": [
         239,
@@ -1002,6 +1066,21 @@ export type FixedVault = {
       "code": 6020,
       "name": "cannotRevokeOverpay",
       "msg": "allow_overpay flag cannot be revoked once enabled"
+    },
+    {
+      "code": 6021,
+      "name": "sweepGracePeriodNotElapsed",
+      "msg": "Sweep grace period (180 days post-maturity) has not elapsed"
+    },
+    {
+      "code": 6022,
+      "name": "nothingToSweep",
+      "msg": "Repay vault is empty, nothing to sweep"
+    },
+    {
+      "code": 6023,
+      "name": "noRepayRemaining",
+      "msg": "No repay funds remaining for withdrawal"
     }
   ],
   "types": [
@@ -1284,6 +1363,13 @@ export type FixedVault = {
               "Allow repay amounts exceeding total_expected_return (e.g. goodwill bonus)"
             ],
             "type": "bool"
+          },
+          {
+            "name": "totalSwept",
+            "docs": [
+              "Total amount swept by admin from repay_vault after grace period (orphaned funds)"
+            ],
+            "type": "u64"
           },
           {
             "name": "bump",

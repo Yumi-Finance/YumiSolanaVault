@@ -16,6 +16,7 @@ import {
   depositDeadlineTs,
   apyBpsToPercent,
   uiToLamports,
+  SWEEP_GRACE_SECONDS,
 } from "@/lib/client";
 
 /* ---------- Section wrapper ---------- */
@@ -448,6 +449,20 @@ export default function AdminPage() {
         publicKey,
         new PublicKey(ewPoolAddr)
       );
+      return client.send(ix);
+    });
+  };
+
+  /* ============ Sweep Repay Vault ============ */
+  const [swPoolAddr, setSwPoolAddr] = useState("");
+
+  const handleSweepRepayVault = () => {
+    if (!client || !publicKey || !swPoolAddr) return;
+    execTx("Sweep Repay Vault", async () => {
+      const pool = new PublicKey(swPoolAddr);
+      const poolData = await client.fetchPool(pool);
+      const adminToken = getAssociatedTokenAddressSync(poolData.depositMint, publicKey);
+      const ix = await client.sweepRepayVaultIx(publicKey, pool, adminToken);
       return client.send(ix);
     });
   };
@@ -890,6 +905,40 @@ export default function AdminPage() {
             className={btnSuccess}
           >
             Enable Withdrawals
+          </button>
+        </div>
+      </Section>
+
+      {/* Sweep Repay Vault */}
+      <Section title="Sweep Repay Vault (L-3)">
+        <div className="space-y-3">
+          <p className="text-xs text-zinc-500">
+            Recover orphaned repay funds after {SWEEP_GRACE_SECONDS / 86400} days post-maturity.
+            Covers yTokens sent to unreachable addresses.
+          </p>
+          <Field label="Pool">
+            <PoolSelect value={swPoolAddr} onChange={setSwPoolAddr} />
+          </Field>
+          {(() => {
+            const sp = selectedPool(swPoolAddr);
+            if (!sp) return null;
+            const sweepAfter = sp.maturityTs.addn(SWEEP_GRACE_SECONDS);
+            const nowBn = new BN(Math.floor(Date.now() / 1000));
+            const canSweep = nowBn.gte(sweepAfter) && sp.withdrawalsEnabled && sp.remainingRepay.gtn(0);
+            return (
+              <div className="bg-zinc-800/40 rounded-lg p-3 text-xs text-zinc-400 grid grid-cols-2 gap-2">
+                <div>Remaining Repay: <span className={`font-medium ${sp.remainingRepay.gtn(0) ? "text-amber-400" : "text-emerald-400"}`}>{lamportsToUi(sp.remainingRepay, 6)}</span></div>
+                <div>Sweep Available: <span className={canSweep ? "text-emerald-400" : "text-amber-400"}>{canSweep ? "Yes" : `After ${formatTimestamp(sweepAfter)}`}</span></div>
+                <div>Withdrawals: <span className={sp.withdrawalsEnabled ? "text-emerald-400" : "text-amber-400"}>{sp.withdrawalsEnabled ? "Enabled" : "Disabled"}</span></div>
+              </div>
+            );
+          })()}
+          <button
+            onClick={handleSweepRepayVault}
+            disabled={txLoading || !swPoolAddr}
+            className={btnDanger}
+          >
+            Sweep Repay Vault
           </button>
         </div>
       </Section>

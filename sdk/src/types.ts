@@ -47,6 +47,7 @@ export interface VaultPoolAccount {
   withdrawalsEnabled: boolean;
   whitelistEnabled: boolean;
   allowOverpay: boolean;
+  totalSwept: BN;
   bump: number;
   depositVaultBump: number;
   repayVaultBump: number;

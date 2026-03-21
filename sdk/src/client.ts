@@ -377,6 +377,25 @@ export class VaultClient {
       .instruction();
   }
 
+  async sweepRepayVaultIx(
+    authority: PublicKey,
+    pool: PublicKey,
+    adminTokenAccount: PublicKey
+  ): Promise<TransactionInstruction> {
+    const poolData = await this.fetchPool(pool);
+    const config = this.deriveConfigAddress();
+    return this.program.methods
+      .sweepRepayVault()
+      .accountsPartial({
+        authority,
+        config,
+        pool,
+        repayVault: poolData.repayVault,
+        adminTokenAccount,
+      })
+      .instruction();
+  }
+
   // ---------------------------------------------------------------------------
   // Convenience rpc() wrappers (sign + send via provider)
   // ---------------------------------------------------------------------------
@@ -488,6 +507,15 @@ export class VaultClient {
   async enableWithdrawals(pool: PublicKey): Promise<TransactionSignature> {
     const authority = this.provider.wallet.publicKey;
     const ix = await this.enableWithdrawalsIx(authority, pool);
+    return this.sendTx(ix);
+  }
+
+  async sweepRepayVault(
+    pool: PublicKey,
+    adminTokenAccount: PublicKey
+  ): Promise<TransactionSignature> {
+    const authority = this.provider.wallet.publicKey;
+    const ix = await this.sweepRepayVaultIx(authority, pool, adminTokenAccount);
     return this.sendTx(ix);
   }
 

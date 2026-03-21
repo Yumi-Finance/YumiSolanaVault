@@ -740,6 +740,70 @@
       "args": []
     },
     {
+      "name": "sweep_repay_vault",
+      "discriminator": [
+        193,
+        28,
+        190,
+        50,
+        16,
+        108,
+        22,
+        7
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "repay_vault",
+          "writable": true
+        },
+        {
+          "name": "admin_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "update_pool",
       "discriminator": [
         239,
@@ -996,6 +1060,21 @@
       "code": 6020,
       "name": "CannotRevokeOverpay",
       "msg": "allow_overpay flag cannot be revoked once enabled"
+    },
+    {
+      "code": 6021,
+      "name": "SweepGracePeriodNotElapsed",
+      "msg": "Sweep grace period (180 days post-maturity) has not elapsed"
+    },
+    {
+      "code": 6022,
+      "name": "NothingToSweep",
+      "msg": "Repay vault is empty, nothing to sweep"
+    },
+    {
+      "code": 6023,
+      "name": "NoRepayRemaining",
+      "msg": "No repay funds remaining for withdrawal"
     }
   ],
   "types": [
@@ -1278,6 +1357,13 @@
               "Allow repay amounts exceeding total_expected_return (e.g. goodwill bonus)"
             ],
             "type": "bool"
+          },
+          {
+            "name": "total_swept",
+            "docs": [
+              "Total amount swept by admin from repay_vault after grace period (orphaned funds)"
+            ],
+            "type": "u64"
           },
           {
             "name": "bump",

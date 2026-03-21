@@ -50,6 +50,7 @@ pub fn handle_withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
     let clock = Clock::get()?;
     require!(clock.unix_timestamp >= ctx.accounts.pool.maturity_ts, VaultError::MaturityNotReached);
     require!(ctx.accounts.pool.withdrawals_enabled, VaultError::WithdrawalsNotEnabled);
+    require!(ctx.accounts.pool.remaining_repay > 0, VaultError::NoRepayRemaining);
 
     let pool_id = ctx.accounts.pool.pool_id;
     let pool_bump = ctx.accounts.pool.bump;

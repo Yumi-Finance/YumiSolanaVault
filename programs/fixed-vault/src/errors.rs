@@ -44,4 +44,10 @@ pub enum VaultError {
     RepayExceedsCap,
     #[msg("allow_overpay flag cannot be revoked once enabled")]
     CannotRevokeOverpay,
+    #[msg("Sweep grace period (180 days post-maturity) has not elapsed")]
+    SweepGracePeriodNotElapsed,
+    #[msg("Repay vault is empty, nothing to sweep")]
+    NothingToSweep,
+    #[msg("No repay funds remaining for withdrawal")]
+    NoRepayRemaining,
 }
