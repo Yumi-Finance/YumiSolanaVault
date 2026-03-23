@@ -20,6 +20,7 @@ import {
   findYieldMintPda,
   findPermitPda,
 } from "./pda";
+import { normalizeProgramId, ProgramIdInput } from "./programId";
 import {
   InitPoolParams,
   UpdatePoolParams,
@@ -33,9 +34,11 @@ export class VaultClient {
   readonly program: Program<FixedVault>;
   readonly provider: AnchorProvider;
 
-  constructor(provider: AnchorProvider) {
+  constructor(provider: AnchorProvider, opts?: { programId?: ProgramIdInput }) {
     this.provider = provider;
-    this.program = new Program<FixedVault>(idlJson as any, provider);
+    const programId = normalizeProgramId(opts?.programId);
+    const runtimeIdl = { ...(idlJson as any), address: programId.toBase58() };
+    this.program = new Program<FixedVault>(runtimeIdl, provider);
   }
 
   // ---------------------------------------------------------------------------
