@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 
 export const FIXED_VAULT_PROGRAM_ID = new PublicKey(
-  "1hV5chUTbSWcaGH76TpXq8iCFQrjKPACGF6eD68nT53"
+  "T4PVVqVnC8AxD9FbPEsPnwJkq957RfpwV41ZTLN8Xit"
 );
 
 function poolIdToBuffer(poolId: BN | number): Buffer {

@@ -8,7 +8,7 @@ pub mod instructions;
 
 use instructions::*;
 
-declare_id!("1hV5chUTbSWcaGH76TpXq8iCFQrjKPACGF6eD68nT53");
+declare_id!("T4PVVqVnC8AxD9FbPEsPnwJkq957RfpwV41ZTLN8Xit");
 
 pub const BOOTSTRAP_AUTHORITY: Pubkey = pubkey!("33Qc8SgCsHVoNgb75CKmSHkp63jiMTqJiZrBfznhcPwx");
 
