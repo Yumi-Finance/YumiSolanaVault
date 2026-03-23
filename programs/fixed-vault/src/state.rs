@@ -24,8 +24,8 @@ pub struct VaultPool {
     pub deposit_mint: Pubkey,
     /// Yield token mint PDA (1 yToken = 1 USDC at maturity)
     pub yield_mint: Pubkey,
-    /// APY in basis points (e.g. 800 = 8%)
-    pub apy_bps: u16,
+    /// APR in basis points (e.g. 800 = 8%)
+    pub apr_bps: u16,
     /// Unix timestamp when deposits mature and can be withdrawn
     pub maturity_ts: i64,
     /// Seconds before maturity_ts after which deposits are no longer accepted (0 = no restriction)

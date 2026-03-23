@@ -25,8 +25,8 @@ export {
   daysToMaturity,
   depositDeadlineTs,
   userExpectedReturn,
-  apyBpsToPercent,
+  aprBpsToPercent,
   SWEEP_GRACE_SECONDS,
-  MAX_APY_BPS,
+  MAX_APR_BPS,
 } from "./utils";
 export type { FixedVault } from "./idl";

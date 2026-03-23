@@ -3,13 +3,13 @@ use anchor_lang::prelude::*;
 use crate::errors::VaultError;
 use crate::math::calc_expected_return;
 use crate::state::{ProtocolConfig, VaultPool};
-use crate::MAX_APY_BPS;
+use crate::MAX_APR_BPS;
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct UpdatePoolParams {
     pub max_total_deposit: Option<u64>,
     pub min_deposit_amount: Option<u64>,
-    pub apy_bps: Option<u16>,
+    pub apr_bps: Option<u16>,
     pub allow_overpay: Option<bool>,
 }
 
@@ -41,9 +41,9 @@ pub fn handle_update_pool(ctx: Context<UpdatePool>, params: UpdatePoolParams) ->
     if let Some(min_deposit_amount) = params.min_deposit_amount {
         pool.min_deposit_amount = min_deposit_amount;
     }
-    if let Some(apy_bps) = params.apy_bps {
-        require!(apy_bps <= MAX_APY_BPS, VaultError::ApyTooHigh);
-        pool.apy_bps = apy_bps;
+    if let Some(apr_bps) = params.apr_bps {
+        require!(apr_bps <= MAX_APR_BPS, VaultError::AprTooHigh);
+        pool.apr_bps = apr_bps;
     }
     if let Some(allow_overpay) = params.allow_overpay {
         // allow_overpay is a one-way flag — once enabled it cannot be revoked.
@@ -55,7 +55,7 @@ pub fn handle_update_pool(ctx: Context<UpdatePool>, params: UpdatePoolParams) ->
     // Ensures no individual deposit can ever cause a u64 overflow in calc_expected_return.
     let now = Clock::get()?.unix_timestamp;
     let duration_secs = pool.maturity_ts.saturating_sub(now).max(0) as u64;
-    calc_expected_return(pool.max_total_deposit, pool.apy_bps, duration_secs)?;
+    calc_expected_return(pool.max_total_deposit, pool.apr_bps, duration_secs)?;
 
     Ok(())
 }

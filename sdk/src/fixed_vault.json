@@ -1145,8 +1145,8 @@
     },
     {
       "code": 6024,
-      "name": "ApyTooHigh",
-      "msg": "APY exceeds maximum allowed basis points (4000 bps = 40%)"
+      "name": "AprTooHigh",
+      "msg": "APR exceeds maximum allowed basis points (4000 bps = 40%)"
     }
   ],
   "types": [
@@ -1298,7 +1298,7 @@
             "type": "u64"
           },
           {
-            "name": "apy_bps",
+            "name": "apr_bps",
             "type": "u16"
           },
           {
@@ -1405,7 +1405,7 @@
             }
           },
           {
-            "name": "apy_bps",
+            "name": "apr_bps",
             "type": {
               "option": "u16"
             }
@@ -1460,9 +1460,9 @@
             "type": "pubkey"
           },
           {
-            "name": "apy_bps",
+            "name": "apr_bps",
             "docs": [
-              "APY in basis points (e.g. 800 = 8%)"
+              "APR in basis points (e.g. 800 = 8%)"
             ],
             "type": "u16"
           },

@@ -535,12 +535,12 @@ export class VaultClient {
   // Utility
   // ---------------------------------------------------------------------------
 
-  static calcExpectedReturn(amount: BN, apyBps: number, maturityTs: BN, nowTs: BN): BN {
+  static calcExpectedReturn(amount: BN, aprBps: number, maturityTs: BN, nowTs: BN): BN {
     const timeToMaturity = maturityTs.sub(nowTs);
     if (timeToMaturity.lten(0)) return amount;
     const SECONDS_PER_YEAR = new BN(365 * 24 * 3600);
     const BPS_BASE = new BN(10_000);
-    const interest = amount.mul(new BN(apyBps)).mul(timeToMaturity).div(BPS_BASE.mul(SECONDS_PER_YEAR));
+    const interest = amount.mul(new BN(aprBps)).mul(timeToMaturity).div(BPS_BASE.mul(SECONDS_PER_YEAR));
     return amount.add(interest);
   }
 

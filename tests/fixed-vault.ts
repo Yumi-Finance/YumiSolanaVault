@@ -32,7 +32,7 @@ describe("fixed-vault", () => {
   let userYieldAccount: PublicKey;
 
   const POOL_ID = new BN(0);
-  const APY_BPS = 800; // 8%
+  const APR_BPS = 800; // 8%
   const MIN_DEPOSIT = new BN(100_000_000); // 100 USDC
   const MAX_TOTAL_DEPOSIT = new BN(5_000_000_000); // 5000 USDC
   const DEPOSIT_AMOUNT = new BN(1_000_000_000); // 1000 USDC
@@ -161,7 +161,7 @@ describe("fixed-vault", () => {
       await program.methods
         .initPool({
           poolId: POOL_ID,
-          apyBps: APY_BPS,
+          aprBps: APR_BPS,
           maturityTs: maturityTs,
           depositDeadlineOffset: new BN(0),
           minDepositAmount: MIN_DEPOSIT,
@@ -364,14 +364,14 @@ describe("fixed-vault", () => {
   });
 
   describe("update_pool", () => {
-    it("admin updates pool cap and APY", async () => {
+    it("admin updates pool cap and APR", async () => {
       const newMaxDeposit = new BN(10_000_000_000);
 
       await program.methods
         .updatePool({
           maxTotalDeposit: newMaxDeposit,
           minDepositAmount: null,
-          apyBps: 1200,
+          aprBps: 1200,
           allowOverpay: null,
         })
         .accountsPartial({
@@ -383,15 +383,15 @@ describe("fixed-vault", () => {
 
       const pool = await program.account.vaultPool.fetch(poolPda);
       expect(pool.maxTotalDeposit.toNumber()).to.equal(newMaxDeposit.toNumber());
-      expect(pool.apyBps).to.equal(1200);
+      expect(pool.aprBps).to.equal(1200);
     });
 
-    it("resets APY back for other tests", async () => {
+    it("resets APR back for other tests", async () => {
       await program.methods
         .updatePool({
           maxTotalDeposit: null,
           minDepositAmount: null,
-          apyBps: APY_BPS,
+          aprBps: APR_BPS,
           allowOverpay: null,
         })
         .accountsPartial({
@@ -408,7 +408,7 @@ describe("fixed-vault", () => {
           .updatePool({
             maxTotalDeposit: new BN(1),
             minDepositAmount: null,
-            apyBps: null,
+            aprBps: null,
             allowOverpay: null,
           })
           .accountsPartial({
@@ -444,7 +444,7 @@ describe("fixed-vault", () => {
       await program.methods
         .initPool({
           poolId: WL_POOL_ID,
-          apyBps: APY_BPS,
+          aprBps: APR_BPS,
           maturityTs: maturityTs,
           depositDeadlineOffset: new BN(0),
           minDepositAmount: MIN_DEPOSIT,
@@ -580,7 +580,7 @@ describe("fixed-vault", () => {
       await program.methods
         .initPool({
           poolId: POOL_ID_2,
-          apyBps: 1200,
+          aprBps: 1200,
           maturityTs: maturityTs,
           depositDeadlineOffset: new BN(0),
           minDepositAmount: MIN_DEPOSIT,
@@ -662,7 +662,7 @@ describe("fixed-vault", () => {
       await program.methods
         .initPool({
           poolId: SHORT_POOL_ID,
-          apyBps: APY_BPS,
+          aprBps: APR_BPS,
           maturityTs: shortMaturityTs,
           depositDeadlineOffset: new BN(0),
           minDepositAmount: MIN_DEPOSIT,
@@ -880,7 +880,7 @@ describe("fixed-vault", () => {
         await program.methods
           .initPool({
             poolId: hdPoolId,
-            apyBps: APY_BPS,
+            aprBps: APR_BPS,
             maturityTs: maturityTs,
             depositDeadlineOffset: new BN(0),
             minDepositAmount: MIN_DEPOSIT,
@@ -905,7 +905,7 @@ describe("fixed-vault", () => {
       }
     });
 
-    it("rejects pool where max_total_deposit * apy overflows u64", async () => {
+    it("rejects pool where max_total_deposit * apr overflows u64", async () => {
       const overflowPoolId = new BN(201);
       const [oPoolPda] = getPoolPda(overflowPoolId);
       const [oDepositVault] = getDepositVaultPda(oPoolPda);
@@ -916,7 +916,7 @@ describe("fixed-vault", () => {
         await program.methods
           .initPool({
             poolId: overflowPoolId,
-            apyBps: 65535, // max u16
+            aprBps: 65535, // max u16
             maturityTs: maturityTs,
             depositDeadlineOffset: new BN(0),
             minDepositAmount: new BN(1),
@@ -937,8 +937,8 @@ describe("fixed-vault", () => {
           .rpc();
         expect.fail("should have failed");
       } catch (err: any) {
-        // ApyTooHigh fires before MathOverflow now that we have the APY cap guard
-        expect(["MathOverflow", "ApyTooHigh"]).to.include(err.error.errorCode.code);
+        // AprTooHigh fires before MathOverflow now that we have the APR cap guard
+        expect(["MathOverflow", "AprTooHigh"]).to.include(err.error.errorCode.code);
       }
     });
 
@@ -948,7 +948,7 @@ describe("fixed-vault", () => {
           .updatePool({
             maxTotalDeposit: new BN("18446744073709551615"),
             minDepositAmount: null,
-            apyBps: 65535,
+            aprBps: 65535,
             allowOverpay: null,
           })
           .accountsPartial({
@@ -959,8 +959,8 @@ describe("fixed-vault", () => {
           .rpc();
         expect.fail("should have failed");
       } catch (err: any) {
-        // ApyTooHigh fires before MathOverflow now that we have the APY cap guard
-        expect(["MathOverflow", "ApyTooHigh"]).to.include(err.error.errorCode.code);
+        // AprTooHigh fires before MathOverflow now that we have the APR cap guard
+        expect(["MathOverflow", "AprTooHigh"]).to.include(err.error.errorCode.code);
       }
     });
   });
@@ -984,7 +984,7 @@ describe("fixed-vault", () => {
         await program.methods
           .initPool({
             poolId: ddPoolId,
-            apyBps: APY_BPS,
+            aprBps: APR_BPS,
             maturityTs: shortMaturity,
             depositDeadlineOffset: new BN(120), // 120 > 60 — past already
             minDepositAmount: MIN_DEPOSIT,
@@ -1019,7 +1019,7 @@ describe("fixed-vault", () => {
       await program.methods
         .initPool({
           poolId: ddPoolId,
-          apyBps: APY_BPS,
+          aprBps: APR_BPS,
           maturityTs: maturityTs, // 90 days away
           depositDeadlineOffset: new BN(86400), // 1 day before maturity — valid
           minDepositAmount: MIN_DEPOSIT,
@@ -1080,7 +1080,7 @@ describe("fixed-vault", () => {
       await program.methods
         .initPool({
           poolId: M1_POOL_ID,
-          apyBps: APY_BPS,
+          aprBps: APR_BPS,
           maturityTs: m1MaturityTs,
           depositDeadlineOffset: new BN(0),
           minDepositAmount: MIN_DEPOSIT,
@@ -1129,7 +1129,7 @@ describe("fixed-vault", () => {
       await program.methods
         .initPool({
           poolId: emptyPoolId,
-          apyBps: APY_BPS,
+          aprBps: APR_BPS,
           maturityTs: maturityTs,
           depositDeadlineOffset: new BN(0),
           minDepositAmount: MIN_DEPOSIT,
@@ -1296,7 +1296,7 @@ describe("fixed-vault", () => {
       await program.methods
         .initPool({
           poolId: SW_POOL_ID,
-          apyBps: APY_BPS,
+          aprBps: APR_BPS,
           maturityTs: swMaturityTs,
           depositDeadlineOffset: new BN(0),
           minDepositAmount: MIN_DEPOSIT,
@@ -1484,7 +1484,7 @@ describe("fixed-vault", () => {
       await program.methods
         .initPool({
           poolId: OP_POOL_ID,
-          apyBps: APY_BPS,
+          aprBps: APR_BPS,
           maturityTs: maturityTs,
           depositDeadlineOffset: new BN(0),
           minDepositAmount: MIN_DEPOSIT,
@@ -1554,7 +1554,7 @@ describe("fixed-vault", () => {
         .updatePool({
           maxTotalDeposit: null,
           minDepositAmount: null,
-          apyBps: null,
+          aprBps: null,
           allowOverpay: true,
         })
         .accountsPartial({
@@ -1574,7 +1574,7 @@ describe("fixed-vault", () => {
           .updatePool({
             maxTotalDeposit: null,
             minDepositAmount: null,
-            apyBps: null,
+            aprBps: null,
             allowOverpay: false,
           })
           .accountsPartial({
@@ -1613,13 +1613,13 @@ describe("fixed-vault", () => {
   });
 
   // ==========================================================================
-  // Tests for L-6 fix: APY upper bound validation (MAX_APY_BPS = 4000)
+  // Tests for L-6 fix: APR upper bound validation (MAX_APR_BPS = 4000)
   // ==========================================================================
-  describe("L-6: APY upper bound", () => {
+  describe("L-6: APR upper bound", () => {
     const L6_POOL_ID = new BN(600);
     const L6_POOL_ID_2 = new BN(601);
 
-    it("rejects apy_bps above cap in init_pool", async () => {
+    it("rejects apr_bps above cap in init_pool", async () => {
       const [l6PoolPda] = getPoolPda(L6_POOL_ID);
       const [l6DepositVault] = getDepositVaultPda(l6PoolPda);
       const [l6RepayVault] = getRepayVaultPda(l6PoolPda);
@@ -1633,7 +1633,7 @@ describe("fixed-vault", () => {
         await program.methods
           .initPool({
             poolId: L6_POOL_ID,
-            apyBps: 4001, // one above MAX_APY_BPS
+            aprBps: 4001, // one above MAX_APR_BPS
             maturityTs: futureMaturity,
             depositDeadlineOffset: new BN(0),
             minDepositAmount: MIN_DEPOSIT,
@@ -1654,11 +1654,11 @@ describe("fixed-vault", () => {
           .rpc();
         expect.fail("should have failed");
       } catch (err: any) {
-        expect(err.error.errorCode.code).to.equal("ApyTooHigh");
+        expect(err.error.errorCode.code).to.equal("AprTooHigh");
       }
     });
 
-    it("accepts apy_bps at cap (4000) in init_pool", async () => {
+    it("accepts apr_bps at cap (4000) in init_pool", async () => {
       const [l6PoolPda] = getPoolPda(L6_POOL_ID_2);
       const [l6DepositVault] = getDepositVaultPda(l6PoolPda);
       const [l6RepayVault] = getRepayVaultPda(l6PoolPda);
@@ -1671,7 +1671,7 @@ describe("fixed-vault", () => {
       await program.methods
         .initPool({
           poolId: L6_POOL_ID_2,
-          apyBps: 4000, // exactly MAX_APY_BPS — should succeed
+          aprBps: 4000, // exactly MAX_APR_BPS — should succeed
           maturityTs: futureMaturity,
           depositDeadlineOffset: new BN(0),
           minDepositAmount: MIN_DEPOSIT,
@@ -1692,15 +1692,15 @@ describe("fixed-vault", () => {
         .rpc();
 
       const pool = await program.account.vaultPool.fetch(l6PoolPda);
-      expect(pool.apyBps).to.equal(4000);
+      expect(pool.aprBps).to.equal(4000);
     });
 
-    it("rejects apy_bps above cap in update_pool", async () => {
+    it("rejects apr_bps above cap in update_pool", async () => {
       const [l6PoolPda] = getPoolPda(L6_POOL_ID_2);
 
       try {
         await program.methods
-          .updatePool({ apyBps: 4001, maxTotalDeposit: null, minDepositAmount: null, allowOverpay: null })
+          .updatePool({ aprBps: 4001, maxTotalDeposit: null, minDepositAmount: null, allowOverpay: null })
           .accountsPartial({
             authority: authority.publicKey,
             config: configPda,
@@ -1709,7 +1709,7 @@ describe("fixed-vault", () => {
           .rpc();
         expect.fail("should have failed");
       } catch (err: any) {
-        expect(err.error.errorCode.code).to.equal("ApyTooHigh");
+        expect(err.error.errorCode.code).to.equal("AprTooHigh");
       }
     });
   });
@@ -1749,7 +1749,7 @@ describe("fixed-vault", () => {
       await program.methods
         .initPool({
           poolId: EV_POOL_ID,
-          apyBps: APY_BPS,
+          aprBps: APR_BPS,
           maturityTs: evMaturityTs,
           depositDeadlineOffset: new BN(0),
           minDepositAmount: MIN_DEPOSIT,

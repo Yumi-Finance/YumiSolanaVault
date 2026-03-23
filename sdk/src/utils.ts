@@ -5,8 +5,8 @@ import { VaultPoolAccount } from "./types";
 /** Grace period after maturity before admin can sweep orphaned repay funds (180 days in seconds). */
 export const SWEEP_GRACE_SECONDS = 180 * 24 * 3600;
 
-/** Maximum allowed APY in basis points (4000 bps = 40%). */
-export const MAX_APY_BPS = 4000;
+/** Maximum allowed APR in basis points (4000 bps = 40%). */
+export const MAX_APR_BPS = 4000;
 
 /** Format a BN amount (in smallest units) to a human-readable decimal string. */
 export function lamportsToUi(val: BN, decimals: number): string {
@@ -80,7 +80,7 @@ export function userExpectedReturn(
   return yieldBalance;
 }
 
-/** APY in basis points formatted as a percentage string (e.g. "12.50"). */
-export function apyBpsToPercent(bps: number): string {
+/** APR in basis points formatted as a percentage string (e.g. "12.50"). */
+export function aprBpsToPercent(bps: number): string {
   return (bps / 100).toFixed(2);
 }

@@ -1151,8 +1151,8 @@ export type FixedVault = {
     },
     {
       "code": 6024,
-      "name": "apyTooHigh",
-      "msg": "APY exceeds maximum allowed basis points (4000 bps = 40%)"
+      "name": "aprTooHigh",
+      "msg": "APR exceeds maximum allowed basis points (4000 bps = 40%)"
     }
   ],
   "types": [
@@ -1304,7 +1304,7 @@ export type FixedVault = {
             "type": "u64"
           },
           {
-            "name": "apyBps",
+            "name": "aprBps",
             "type": "u16"
           },
           {
@@ -1411,7 +1411,7 @@ export type FixedVault = {
             }
           },
           {
-            "name": "apyBps",
+            "name": "aprBps",
             "type": {
               "option": "u16"
             }
@@ -1466,9 +1466,9 @@ export type FixedVault = {
             "type": "pubkey"
           },
           {
-            "name": "apyBps",
+            "name": "aprBps",
             "docs": [
-              "APY in basis points (e.g. 800 = 8%)"
+              "APR in basis points (e.g. 800 = 8%)"
             ],
             "type": "u16"
           },

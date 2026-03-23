@@ -4,7 +4,7 @@ import { BN } from "@coral-xyz/anchor";
 /** Parameters for initializing a new vault pool */
 export interface InitPoolParams {
   poolId: BN;
-  apyBps: number;
+  aprBps: number;
   maturityTs: BN;
   depositDeadlineOffset: BN;
   minDepositAmount: BN;
@@ -16,7 +16,7 @@ export interface InitPoolParams {
 export interface UpdatePoolParams {
   maxTotalDeposit: BN | null;
   minDepositAmount: BN | null;
-  apyBps: number | null;
+  aprBps: number | null;
   allowOverpay: boolean | null;
 }
 
@@ -34,7 +34,7 @@ export interface VaultPoolAccount {
   repayVault: PublicKey;
   depositMint: PublicKey;
   yieldMint: PublicKey;
-  apyBps: number;
+  aprBps: number;
   maturityTs: BN;
   depositDeadlineOffset: BN;
   minDepositAmount: BN;

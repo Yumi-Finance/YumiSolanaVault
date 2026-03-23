@@ -37,6 +37,6 @@ export {
   daysToMaturity,
   depositDeadlineTs,
   userExpectedReturn,
-  apyBpsToPercent,
+  aprBpsToPercent,
   SWEEP_GRACE_SECONDS,
 } from "@yumi-finance/vault-sdk";

@@ -61,7 +61,7 @@ pub fn handle_deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
     let deposit_deadline_offset = ctx.accounts.pool.deposit_deadline_offset;
     let min_deposit_amount = ctx.accounts.pool.min_deposit_amount;
     let max_total_deposit = ctx.accounts.pool.max_total_deposit;
-    let apy_bps = ctx.accounts.pool.apy_bps;
+    let apr_bps = ctx.accounts.pool.apr_bps;
     let whitelist_enabled = ctx.accounts.pool.whitelist_enabled;
     let pool_key = ctx.accounts.pool.key();
 
@@ -100,7 +100,7 @@ pub fn handle_deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
     }
 
     // Calculate yield token mint amount
-    let mint_amount = calc_expected_return(amount, apy_bps, time_to_maturity as u64)?;
+    let mint_amount = calc_expected_return(amount, apr_bps, time_to_maturity as u64)?;
 
     // Update pool totals
     let pool = &mut ctx.accounts.pool;

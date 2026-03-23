@@ -14,7 +14,7 @@ import {
   poolFillPercent,
   daysToMaturity,
   depositDeadlineTs,
-  apyBpsToPercent,
+  aprBpsToPercent,
   uiToLamports,
   SWEEP_GRACE_SECONDS,
 } from "@/lib/client";
@@ -94,7 +94,7 @@ function PoolRow({ pubkey, pool }: { pubkey: PublicKey; pool: VaultPoolAccount }
           <span className="text-white font-semibold text-sm shrink-0">
             Pool #{pool.poolId.toString()}
           </span>
-          <span className="text-xs text-zinc-500">{apyBpsToPercent(pool.apyBps)}% APY</span>
+          <span className="text-xs text-zinc-500">{aprBpsToPercent(pool.aprBps)}% APR</span>
           <span className="text-xs text-zinc-500">·</span>
           <span className="text-xs text-zinc-500">{lamportsToUi(pool.totalDeposited, 6)} deposited</span>
           {/* Mini fill bar */}
@@ -150,8 +150,8 @@ function PoolRow({ pubkey, pool }: { pubkey: PublicKey; pool: VaultPoolAccount }
           {/* Stats */}
           <div className="grid grid-cols-4 gap-x-4 gap-y-2 text-xs mb-3">
             <div>
-              <span className="text-zinc-500">APY</span>
-              <p className="text-zinc-200 font-medium">{apyBpsToPercent(pool.apyBps)}%</p>
+              <span className="text-zinc-500">APR</span>
+              <p className="text-zinc-200 font-medium">{aprBpsToPercent(pool.aprBps)}%</p>
             </div>
             <div>
               <span className="text-zinc-500">Maturity</span>
@@ -332,7 +332,7 @@ export default function AdminPage() {
 
   /* ============ Create Pool ============ */
   const [cpPoolId, setCpPoolId] = useState("");
-  const [cpApyBps, setCpApyBps] = useState("");
+  const [cpAprBps, setCpAprBps] = useState("");
   const [cpMaturityDate, setCpMaturityDate] = useState("");
   const [cpDeadlineOffset, setCpDeadlineOffset] = useState("0");
   const [cpMinDeposit, setCpMinDeposit] = useState("");
@@ -361,7 +361,7 @@ export default function AdminPage() {
       const maturityTs = Math.floor(new Date(cpMaturityDate).getTime() / 1000);
       const ix = await client.initPoolIx(publicKey, mintPubkey, {
         poolId: new BN(cpPoolId),
-        apyBps: parseInt(cpApyBps),
+        aprBps: parseInt(cpAprBps),
         maturityTs: new BN(maturityTs),
         depositDeadlineOffset: new BN(cpDeadlineOffset),
         minDepositAmount: new BN(Math.floor(parseFloat(cpMinDeposit) * 1e6)),
@@ -375,7 +375,7 @@ export default function AdminPage() {
 
   /* ============ Update Pool ============ */
   const [upPoolAddr, setUpPoolAddr] = useState("");
-  const [upApyBps, setUpApyBps] = useState("");
+  const [upAprBps, setUpAprBps] = useState("");
   const [upMinDeposit, setUpMinDeposit] = useState("");
   const [upMaxDeposit, setUpMaxDeposit] = useState("");
   const [upAllowOverpay, setUpAllowOverpay] = useState(false);
@@ -387,7 +387,7 @@ export default function AdminPage() {
         publicKey,
         new PublicKey(upPoolAddr),
         {
-          apyBps: upApyBps ? parseInt(upApyBps) : null,
+          aprBps: upAprBps ? parseInt(upAprBps) : null,
           minDepositAmount: upMinDeposit
             ? new BN(Math.floor(parseFloat(upMinDeposit) * 1e6))
             : null,
@@ -657,13 +657,13 @@ export default function AdminPage() {
               onChange={(e) => setCpPoolId(e.target.value)}
             />
           </Field>
-          <Field label="APY (basis points)">
+          <Field label="APR (basis points)">
             <input
               className={inputCls}
               type="number"
               placeholder="800 = 8%"
-              value={cpApyBps}
-              onChange={(e) => setCpApyBps(e.target.value)}
+              value={cpAprBps}
+              onChange={(e) => setCpAprBps(e.target.value)}
             />
           </Field>
           <Field label="Maturity Date">
@@ -752,20 +752,20 @@ export default function AdminPage() {
             if (!sp) return null;
             return (
               <div className="bg-zinc-800/40 rounded-lg p-3 text-xs text-zinc-400 grid grid-cols-3 gap-2">
-                <div>Current APY: <span className="text-white">{apyBpsToPercent(sp.apyBps)}%</span></div>
+                <div>Current APR: <span className="text-white">{aprBpsToPercent(sp.aprBps)}%</span></div>
                 <div>Current Min: <span className="text-white">{lamportsToUi(sp.minDepositAmount, 6)}</span></div>
                 <div>Current Cap: <span className="text-white">{lamportsToUi(sp.maxTotalDeposit, 6)}</span></div>
               </div>
             );
           })()}
           <div className="grid grid-cols-3 gap-3">
-            <Field label="New APY (bps, optional)">
+            <Field label="New APR (bps, optional)">
               <input
                 className={inputCls}
                 type="number"
                 placeholder="Leave empty to skip"
-                value={upApyBps}
-                onChange={(e) => setUpApyBps(e.target.value)}
+                value={upAprBps}
+                onChange={(e) => setUpAprBps(e.target.value)}
               />
             </Field>
             <Field label="Min Deposit (optional)">
