@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
 use crate::errors::VaultError;
+use crate::events::AdminWithdrawEvent;
 use crate::state::{ProtocolConfig, VaultPool};
 
 #[derive(Accounts)]
@@ -72,6 +73,14 @@ pub fn handle_admin_withdraw(ctx: Context<AdminWithdraw>, amount: u64) -> Result
     ctx.accounts.pool.total_admin_withdrawn = already_withdrawn
         .checked_add(amount)
         .ok_or(VaultError::MathOverflow)?;
+
+    emit!(AdminWithdrawEvent {
+        pool: ctx.accounts.pool.key(),
+        authority: ctx.accounts.authority.key(),
+        amount,
+        total_admin_withdrawn: ctx.accounts.pool.total_admin_withdrawn,
+        ts: Clock::get()?.unix_timestamp,
+    });
 
     Ok(())
 }

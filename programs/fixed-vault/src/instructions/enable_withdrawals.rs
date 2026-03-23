@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::VaultError;
+use crate::events::EnableWithdrawalsEvent;
 use crate::state::{ProtocolConfig, VaultPool};
 
 #[derive(Accounts)]
@@ -25,10 +26,20 @@ pub fn handle_enable_withdrawals(ctx: Context<EnableWithdrawals>) -> Result<()> 
     require!(
         now >= ctx.accounts.pool.maturity_ts,
         VaultError::MaturityNotReached
-    );    require!(
+    );
+    require!(
         ctx.accounts.pool.remaining_repay > 0,
         VaultError::NoRepayToDistribute
     );
     ctx.accounts.pool.withdrawals_enabled = true;
+
+    emit!(EnableWithdrawalsEvent {
+        pool: ctx.accounts.pool.key(),
+        authority: ctx.accounts.authority.key(),
+        total_repaid: ctx.accounts.pool.total_repaid,
+        total_expected_return: ctx.accounts.pool.total_expected_return,
+        ts: now,
+    });
+
     Ok(())
 }

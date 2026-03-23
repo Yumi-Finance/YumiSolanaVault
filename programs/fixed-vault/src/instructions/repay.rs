@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
 use crate::errors::VaultError;
+use crate::events::RepayEvent;
 use crate::state::{ProtocolConfig, VaultPool};
 
 #[derive(Accounts)]
@@ -70,6 +71,15 @@ pub fn handle_repay(ctx: Context<Repay>, amount: u64) -> Result<()> {
         .remaining_repay
         .checked_add(amount)
         .ok_or(VaultError::MathOverflow)?;
+
+    emit!(RepayEvent {
+        pool: pool.key(),
+        authority: ctx.accounts.authority.key(),
+        amount,
+        total_repaid: pool.total_repaid,
+        remaining_repay: pool.remaining_repay,
+        ts: Clock::get()?.unix_timestamp,
+    });
 
     Ok(())
 }

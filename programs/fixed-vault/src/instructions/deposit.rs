@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 
 use crate::errors::VaultError;
+use crate::events::DepositEvent;
 use crate::math::calc_expected_return;
 use crate::state::{DepositPermit, VaultPool};
 
@@ -144,6 +145,15 @@ pub fn handle_deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         ),
         mint_amount,
     )?;
+
+    emit!(DepositEvent {
+        pool: pool_key,
+        user: ctx.accounts.user.key(),
+        amount,
+        y_tokens_minted: mint_amount,
+        total_deposited: ctx.accounts.pool.total_deposited,
+        ts: now,
+    });
 
     Ok(())
 }

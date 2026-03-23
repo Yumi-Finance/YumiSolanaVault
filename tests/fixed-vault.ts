@@ -1713,4 +1713,200 @@ describe("fixed-vault", () => {
       }
     });
   });
+
+  // ==========================================================================
+  // Tests for L-1 fix: structured events for key operations
+  // ==========================================================================
+  describe("L-1: event emission", () => {
+    const EV_POOL_ID = new BN(700);
+    let evPoolPda: PublicKey;
+    let evDepositVaultPda: PublicKey;
+    let evRepayVaultPda: PublicKey;
+    let evYieldMintPda: PublicKey;
+    let evMint: PublicKey;
+    let evAdminTokenAccount: PublicKey;
+    let evUserTokenAccount: PublicKey;
+    let evUserYieldAccount: PublicKey;
+
+    before(async () => {
+      evMint = await createMint(connection, (authority as any).payer, authority.publicKey, null, 6);
+
+      [evPoolPda] = getPoolPda(EV_POOL_ID);
+      [evDepositVaultPda] = getDepositVaultPda(evPoolPda);
+      [evRepayVaultPda] = getRepayVaultPda(evPoolPda);
+      [evYieldMintPda] = getYieldMintPda(evPoolPda);
+
+      evAdminTokenAccount = await createAccount(connection, (authority as any).payer, evMint, authority.publicKey);
+      await mintTo(connection, (authority as any).payer, evMint, evAdminTokenAccount, authority.publicKey, 10_000_000_000);
+
+      evUserTokenAccount = await createAccount(connection, userKeypair, evMint, userKeypair.publicKey);
+      await mintTo(connection, (authority as any).payer, evMint, evUserTokenAccount, authority.publicKey, 5_000_000_000);
+
+      const slot = await connection.getSlot();
+      const blockTime = await connection.getBlockTime(slot);
+      const evMaturityTs = new BN(blockTime! + 3); // short maturity
+
+      await program.methods
+        .initPool({
+          poolId: EV_POOL_ID,
+          apyBps: APY_BPS,
+          maturityTs: evMaturityTs,
+          depositDeadlineOffset: new BN(0),
+          minDepositAmount: MIN_DEPOSIT,
+          maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+          whitelistEnabled: false,
+        })
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: evPoolPda,
+          depositMint: evMint,
+          depositVault: evDepositVaultPda,
+          repayVault: evRepayVaultPda,
+          yieldMint: evYieldMintPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+
+      evUserYieldAccount = await createAccount(connection, userKeypair, evYieldMintPda, userKeypair.publicKey);
+    });
+
+    it("emits DepositEvent", async () => {
+      const events: any[] = [];
+      const listener = program.addEventListener("depositEvent", (e: any) => events.push(e));
+
+      await program.methods
+        .deposit(DEPOSIT_AMOUNT)
+        .accountsPartial({
+          user: userKeypair.publicKey,
+          pool: evPoolPda,
+          userTokenAccount: evUserTokenAccount,
+          depositVault: evDepositVaultPda,
+          yieldMint: evYieldMintPda,
+          userYieldAccount: evUserYieldAccount,
+          permit: null,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([userKeypair])
+        .rpc();
+
+      // Give some time for event to be received
+      await new Promise((r) => setTimeout(r, 500));
+      await program.removeEventListener(listener);
+
+      expect(events.length).to.equal(1);
+      expect(events[0].pool.toBase58()).to.equal(evPoolPda.toBase58());
+      expect(events[0].user.toBase58()).to.equal(userKeypair.publicKey.toBase58());
+      expect(events[0].amount.toNumber()).to.equal(DEPOSIT_AMOUNT.toNumber());
+      expect(events[0].yTokensMinted.toNumber()).to.be.greaterThan(0);
+    });
+
+    it("emits AdminWithdrawEvent", async () => {
+      const events: any[] = [];
+      const listener = program.addEventListener("adminWithdrawEvent", (e: any) => events.push(e));
+
+      await program.methods
+        .adminWithdraw(DEPOSIT_AMOUNT)
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: evPoolPda,
+          depositVault: evDepositVaultPda,
+          adminTokenAccount: evAdminTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+
+      await new Promise((r) => setTimeout(r, 500));
+      await program.removeEventListener(listener);
+
+      expect(events.length).to.equal(1);
+      expect(events[0].pool.toBase58()).to.equal(evPoolPda.toBase58());
+      expect(events[0].amount.toNumber()).to.equal(DEPOSIT_AMOUNT.toNumber());
+    });
+
+    it("emits RepayEvent", async () => {
+      const pool = await program.account.vaultPool.fetch(evPoolPda);
+      const repayAmt = pool.totalExpectedReturn;
+
+      const events: any[] = [];
+      const listener = program.addEventListener("repayEvent", (e: any) => events.push(e));
+
+      await program.methods
+        .repay(repayAmt)
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: evPoolPda,
+          adminTokenAccount: evAdminTokenAccount,
+          repayVault: evRepayVaultPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+
+      await new Promise((r) => setTimeout(r, 500));
+      await program.removeEventListener(listener);
+
+      expect(events.length).to.equal(1);
+      expect(events[0].pool.toBase58()).to.equal(evPoolPda.toBase58());
+      expect(events[0].amount.toNumber()).to.equal(repayAmt.toNumber());
+      expect(events[0].totalRepaid.toNumber()).to.equal(repayAmt.toNumber());
+    });
+
+    it("emits EnableWithdrawalsEvent", async () => {
+      // Wait for maturity
+      await new Promise((r) => setTimeout(r, 4000));
+
+      const events: any[] = [];
+      const listener = program.addEventListener("enableWithdrawalsEvent", (e: any) => events.push(e));
+
+      await program.methods
+        .enableWithdrawals()
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: evPoolPda,
+        })
+        .rpc();
+
+      await new Promise((r) => setTimeout(r, 500));
+      await program.removeEventListener(listener);
+
+      expect(events.length).to.equal(1);
+      expect(events[0].pool.toBase58()).to.equal(evPoolPda.toBase58());
+      expect(events[0].totalRepaid.toNumber()).to.be.greaterThan(0);
+    });
+
+    it("emits WithdrawEvent", async () => {
+      const yieldBal = await getAccount(connection, evUserYieldAccount);
+      const amount = new BN(yieldBal.amount.toString());
+
+      const events: any[] = [];
+      const listener = program.addEventListener("withdrawEvent", (e: any) => events.push(e));
+
+      await program.methods
+        .withdraw(amount)
+        .accountsPartial({
+          user: userKeypair.publicKey,
+          pool: evPoolPda,
+          yieldMint: evYieldMintPda,
+          userYieldAccount: evUserYieldAccount,
+          repayVault: evRepayVaultPda,
+          userTokenAccount: evUserTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([userKeypair])
+        .rpc();
+
+      await new Promise((r) => setTimeout(r, 500));
+      await program.removeEventListener(listener);
+
+      expect(events.length).to.equal(1);
+      expect(events[0].pool.toBase58()).to.equal(evPoolPda.toBase58());
+      expect(events[0].user.toBase58()).to.equal(userKeypair.publicKey.toBase58());
+      expect(events[0].yTokensBurned.toNumber()).to.equal(amount.toNumber());
+      expect(events[0].payout.toNumber()).to.be.greaterThan(0);
+    });
+  });
 });

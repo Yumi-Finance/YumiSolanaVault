@@ -961,6 +961,73 @@ export type FixedVault = {
       ]
     }
   ],
+  "events": [
+    {
+      "name": "adminWithdrawEvent",
+      "discriminator": [
+        209,
+        205,
+        149,
+        148,
+        126,
+        161,
+        184,
+        237
+      ]
+    },
+    {
+      "name": "depositEvent",
+      "discriminator": [
+        120,
+        248,
+        61,
+        83,
+        31,
+        142,
+        107,
+        144
+      ]
+    },
+    {
+      "name": "enableWithdrawalsEvent",
+      "discriminator": [
+        254,
+        83,
+        37,
+        137,
+        244,
+        199,
+        197,
+        200
+      ]
+    },
+    {
+      "name": "repayEvent",
+      "discriminator": [
+        129,
+        213,
+        0,
+        108,
+        218,
+        108,
+        82,
+        140
+      ]
+    },
+    {
+      "name": "withdrawEvent",
+      "discriminator": [
+        22,
+        9,
+        133,
+        26,
+        160,
+        44,
+        71,
+        192
+      ]
+    }
+  ],
   "errors": [
     {
       "code": 6000,
@@ -1090,6 +1157,66 @@ export type FixedVault = {
   ],
   "types": [
     {
+      "name": "adminWithdrawEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "totalAdminWithdrawn",
+            "type": "u64"
+          },
+          {
+            "name": "ts",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "depositEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "yTokensMinted",
+            "type": "u64"
+          },
+          {
+            "name": "totalDeposited",
+            "type": "u64"
+          },
+          {
+            "name": "ts",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "depositPermit",
       "type": {
         "kind": "struct",
@@ -1135,6 +1262,34 @@ export type FixedVault = {
               "PDA bump"
             ],
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "enableWithdrawalsEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "totalRepaid",
+            "type": "u64"
+          },
+          {
+            "name": "totalExpectedReturn",
+            "type": "u64"
+          },
+          {
+            "name": "ts",
+            "type": "i64"
           }
         ]
       }
@@ -1202,6 +1357,38 @@ export type FixedVault = {
               "PDA bump"
             ],
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "repayEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "totalRepaid",
+            "type": "u64"
+          },
+          {
+            "name": "remainingRepay",
+            "type": "u64"
+          },
+          {
+            "name": "ts",
+            "type": "i64"
           }
         ]
       }
@@ -1403,6 +1590,38 @@ export type FixedVault = {
               "Yield mint PDA bump"
             ],
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "withdrawEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "yTokensBurned",
+            "type": "u64"
+          },
+          {
+            "name": "payout",
+            "type": "u64"
+          },
+          {
+            "name": "remainingRepay",
+            "type": "u64"
+          },
+          {
+            "name": "ts",
+            "type": "i64"
           }
         ]
       }

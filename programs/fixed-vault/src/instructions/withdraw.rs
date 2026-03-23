@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount, Transfer};
 
 use crate::errors::VaultError;
+use crate::events::WithdrawEvent;
 use crate::state::VaultPool;
 
 #[derive(Accounts)]
@@ -110,6 +111,15 @@ pub fn handle_withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
         .remaining_repay
         .checked_sub(payout)
         .ok_or(VaultError::MathOverflow)?;
+
+    emit!(WithdrawEvent {
+        pool: pool.key(),
+        user: ctx.accounts.user.key(),
+        y_tokens_burned: amount,
+        payout,
+        remaining_repay: pool.remaining_repay,
+        ts: clock.unix_timestamp,
+    });
 
     Ok(())
 }
