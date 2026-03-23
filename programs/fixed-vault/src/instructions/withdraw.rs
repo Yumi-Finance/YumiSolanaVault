@@ -7,7 +7,6 @@ use crate::state::VaultPool;
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
-    #[account(mut)]
     pub user: Signer<'info>,
 
     #[account(

@@ -148,7 +148,6 @@ export type FixedVault = {
       "accounts": [
         {
           "name": "user",
-          "writable": true,
           "signer": true
         },
         {
@@ -177,7 +176,30 @@ export type FixedVault = {
             "Optional: deposit permit (required when pool.whitelist_enabled)"
           ],
           "writable": true,
-          "optional": true
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  114,
+                  109,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
         },
         {
           "name": "tokenProgram",
@@ -914,7 +936,6 @@ export type FixedVault = {
       "accounts": [
         {
           "name": "user",
-          "writable": true,
           "signer": true
         },
         {

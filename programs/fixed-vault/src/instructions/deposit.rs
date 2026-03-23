@@ -8,7 +8,6 @@ use crate::state::{DepositPermit, VaultPool};
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
-    #[account(mut)]
     pub user: Signer<'info>,
 
     #[account(
@@ -45,7 +44,11 @@ pub struct Deposit<'info> {
     pub user_yield_account: Account<'info, TokenAccount>,
 
     /// Optional: deposit permit (required when pool.whitelist_enabled)
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"permit", pool.key().as_ref(), user.key().as_ref()],
+        bump = permit.bump,
+    )]
     pub permit: Option<Account<'info, DepositPermit>>,
 
     pub token_program: Program<'info, Token>,
@@ -74,10 +77,10 @@ pub fn handle_deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
     }
 
     // Check maturity not passed
+    require!(maturity_ts > now, VaultError::DepositDeadlinePassed);
     let time_to_maturity = maturity_ts
         .checked_sub(now)
         .ok_or(VaultError::MathOverflow)?;
-    require!(time_to_maturity > 0, VaultError::DepositDeadlinePassed);
 
     require!(amount >= min_deposit_amount, VaultError::DepositTooSmall);
 
@@ -85,8 +88,6 @@ pub fn handle_deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
     if whitelist_enabled {
         let permit = ctx.accounts.permit.as_mut()
             .ok_or(VaultError::NotWhitelisted)?;
-        require!(permit.pool == pool_key, VaultError::NotWhitelisted);
-        require!(permit.user == ctx.accounts.user.key(), VaultError::NotWhitelisted);
         if permit.expires_at > 0 {
             require!(now <= permit.expires_at, VaultError::PermitExpired);
         }
