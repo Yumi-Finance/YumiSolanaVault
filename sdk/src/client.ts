@@ -20,6 +20,7 @@ import {
   findYieldMintPda,
   findPermitPda,
 } from "./pda";
+import { normalizeProgramId, ProgramIdInput } from "./programId";
 import {
   InitPoolParams,
   UpdatePoolParams,
@@ -33,9 +34,11 @@ export class VaultClient {
   readonly program: Program<FixedVault>;
   readonly provider: AnchorProvider;
 
-  constructor(provider: AnchorProvider) {
+  constructor(provider: AnchorProvider, opts?: { programId?: ProgramIdInput }) {
     this.provider = provider;
-    this.program = new Program<FixedVault>(idlJson as any, provider);
+    const programId = normalizeProgramId(opts?.programId);
+    const runtimeIdl = { ...(idlJson as any), address: programId.toBase58() };
+    this.program = new Program<FixedVault>(runtimeIdl, provider);
   }
 
   // ---------------------------------------------------------------------------
@@ -157,8 +160,8 @@ export class VaultClient {
 
   /**
    * Returns instructions for deposit. Automatically derives ATAs and
-   * prepends a createAssociatedTokenAccountIdempotent for the yield ATA.
-   * Returns an array — send ALL of them in one transaction.
+   * prepends createAssociatedTokenAccountIdempotent for the user's deposit-token ATA
+   * (e.g. USDC) and yield ATA if they don't exist. Returns an array — send ALL in one transaction.
    */
   async depositIxs(
     user: PublicKey,
@@ -170,6 +173,9 @@ export class VaultClient {
     const userTokenAccount = getAssociatedTokenAddressSync(poolData.depositMint, user);
     const userYieldAccount = getAssociatedTokenAddressSync(poolData.yieldMint, user);
 
+    const createTokenAtaIx = createAssociatedTokenAccountIdempotentInstruction(
+      user, userTokenAccount, user, poolData.depositMint
+    );
     const createYieldAtaIx = createAssociatedTokenAccountIdempotentInstruction(
       user, userYieldAccount, user, poolData.yieldMint
     );
@@ -187,7 +193,7 @@ export class VaultClient {
       })
       .instruction();
 
-    return [createYieldAtaIx, depositIx];
+    return [createTokenAtaIx, createYieldAtaIx, depositIx];
   }
 
   /** @deprecated Use depositIxs() instead — it auto-creates the yield ATA */

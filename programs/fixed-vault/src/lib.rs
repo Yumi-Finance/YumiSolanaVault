@@ -6,7 +6,7 @@ pub mod instructions;
 
 use instructions::*;
 
-declare_id!("1hV5chUTbSWcaGH76TpXq8iCFQrjKPACGF6eD68nT53");
+declare_id!("B8b7tz681buonvw7mb6rV5CABPy3fTekETea8tdQj8Kb");
 
 pub const BOOTSTRAP_AUTHORITY: Pubkey = pubkey!("33Qc8SgCsHVoNgb75CKmSHkp63jiMTqJiZrBfznhcPwx");
 
