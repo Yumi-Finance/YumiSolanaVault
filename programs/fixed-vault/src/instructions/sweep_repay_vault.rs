@@ -2,11 +2,13 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
 use crate::errors::VaultError;
-use crate::events::AdminWithdrawEvent;
 use crate::state::{ProtocolConfig, VaultPool};
 
+/// Grace period after maturity before admin can sweep orphaned repay funds (180 days).
+pub const SWEEP_GRACE_SECONDS: i64 = 15_552_000; // 180 * 24 * 3600
+
 #[derive(Accounts)]
-pub struct AdminWithdraw<'info> {
+pub struct SweepRepayVault<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
 
@@ -26,9 +28,9 @@ pub struct AdminWithdraw<'info> {
 
     #[account(
         mut,
-        address = pool.deposit_vault,
+        address = pool.repay_vault,
     )]
-    pub deposit_vault: Account<'info, TokenAccount>,
+    pub repay_vault: Account<'info, TokenAccount>,
 
     #[account(
         mut,
@@ -40,48 +42,43 @@ pub struct AdminWithdraw<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn handle_admin_withdraw(ctx: Context<AdminWithdraw>, amount: u64) -> Result<()> {
+pub fn handle_sweep_repay_vault(ctx: Context<SweepRepayVault>) -> Result<()> {
     let pool = &ctx.accounts.pool;
+    let now = Clock::get()?.unix_timestamp;
 
-    // Limit: admin cannot withdraw more than total_deposited
-    let already_withdrawn = pool.total_admin_withdrawn;
-    let max_withdrawable = pool.total_deposited.checked_sub(already_withdrawn)
+    // Must have withdrawals enabled (normal flow completed)
+    require!(pool.withdrawals_enabled, VaultError::WithdrawalsNotEnabled);
+
+    // Must be past maturity + grace period
+    let sweep_after = pool
+        .maturity_ts
+        .checked_add(SWEEP_GRACE_SECONDS)
         .ok_or(VaultError::MathOverflow)?;
-    require!(amount <= max_withdrawable, VaultError::AdminWithdrawExceeded);
+    require!(now >= sweep_after, VaultError::SweepGracePeriodNotElapsed);
+
+    let amount = ctx.accounts.repay_vault.amount;
+    require!(amount > 0, VaultError::NothingToSweep);
 
     let pool_id_bytes = pool.pool_id.to_le_bytes();
-    let seeds: &[&[u8]] = &[
-        b"vault-pool",
-        &pool_id_bytes,
-        &[pool.bump],
-    ];
+    let seeds: &[&[u8]] = &[b"vault-pool", &pool_id_bytes, &[pool.bump]];
     let signer_seeds = &[seeds];
 
     token::transfer(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
             Transfer {
-                from: ctx.accounts.deposit_vault.to_account_info(),
+                from: ctx.accounts.repay_vault.to_account_info(),
                 to: ctx.accounts.admin_token_account.to_account_info(),
-                authority: pool.to_account_info(),
+                authority: ctx.accounts.pool.to_account_info(),
             },
             signer_seeds,
         ),
         amount,
     )?;
 
-    // Track amount withdrawn
-    ctx.accounts.pool.total_admin_withdrawn = already_withdrawn
-        .checked_add(amount)
-        .ok_or(VaultError::MathOverflow)?;
-
-    emit!(AdminWithdrawEvent {
-        pool: ctx.accounts.pool.key(),
-        authority: ctx.accounts.authority.key(),
-        amount,
-        total_admin_withdrawn: ctx.accounts.pool.total_admin_withdrawn,
-        ts: Clock::get()?.unix_timestamp,
-    });
+    let pool = &mut ctx.accounts.pool;
+    pool.total_swept = pool.remaining_repay;
+    pool.remaining_repay = 0;
 
     Ok(())
 }

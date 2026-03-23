@@ -2,13 +2,18 @@ use anchor_lang::prelude::*;
 
 pub mod state;
 pub mod errors;
+pub mod events;
+pub mod math;
 pub mod instructions;
 
 use instructions::*;
 
-declare_id!("B8b7tz681buonvw7mb6rV5CABPy3fTekETea8tdQj8Kb");
+declare_id!("T4PVVqVnC8AxD9FbPEsPnwJkq957RfpwV41ZTLN8Xit");
 
 pub const BOOTSTRAP_AUTHORITY: Pubkey = pubkey!("33Qc8SgCsHVoNgb75CKmSHkp63jiMTqJiZrBfznhcPwx");
+
+/// Maximum allowed APR in basis points (4000 bps = 40%)
+pub const MAX_APR_BPS: u16 = 4000;
 
 #[program]
 pub mod fixed_vault {
@@ -65,5 +70,9 @@ pub mod fixed_vault {
 
     pub fn enable_withdrawals(ctx: Context<EnableWithdrawals>) -> Result<()> {
         instructions::enable_withdrawals::handle_enable_withdrawals(ctx)
+    }
+
+    pub fn sweep_repay_vault(ctx: Context<SweepRepayVault>) -> Result<()> {
+        instructions::sweep_repay_vault::handle_sweep_repay_vault(ctx)
     }
 }

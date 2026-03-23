@@ -2,11 +2,12 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 
 use crate::errors::VaultError;
+use crate::events::DepositEvent;
+use crate::math::calc_expected_return;
 use crate::state::{DepositPermit, VaultPool};
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
-    #[account(mut)]
     pub user: Signer<'info>,
 
     #[account(
@@ -18,8 +19,8 @@ pub struct Deposit<'info> {
 
     #[account(
         mut,
-        constraint = user_token_account.mint == pool.deposit_mint,
-        constraint = user_token_account.owner == user.key(),
+        token::mint = pool.deposit_mint,
+        token::authority = user,
     )]
     pub user_token_account: Account<'info, TokenAccount>,
 
@@ -37,13 +38,17 @@ pub struct Deposit<'info> {
 
     #[account(
         mut,
-        constraint = user_yield_account.mint == pool.yield_mint,
-        constraint = user_yield_account.owner == user.key(),
+        token::mint = yield_mint,
+        token::authority = user,
     )]
     pub user_yield_account: Account<'info, TokenAccount>,
 
     /// Optional: deposit permit (required when pool.whitelist_enabled)
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"permit", pool.key().as_ref(), user.key().as_ref()],
+        bump = permit.bump,
+    )]
     pub permit: Option<Account<'info, DepositPermit>>,
 
     pub token_program: Program<'info, Token>,
@@ -59,7 +64,7 @@ pub fn handle_deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
     let deposit_deadline_offset = ctx.accounts.pool.deposit_deadline_offset;
     let min_deposit_amount = ctx.accounts.pool.min_deposit_amount;
     let max_total_deposit = ctx.accounts.pool.max_total_deposit;
-    let apy_bps = ctx.accounts.pool.apy_bps;
+    let apr_bps = ctx.accounts.pool.apr_bps;
     let whitelist_enabled = ctx.accounts.pool.whitelist_enabled;
     let pool_key = ctx.accounts.pool.key();
 
@@ -72,10 +77,10 @@ pub fn handle_deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
     }
 
     // Check maturity not passed
+    require!(maturity_ts > now, VaultError::DepositDeadlinePassed);
     let time_to_maturity = maturity_ts
         .checked_sub(now)
         .ok_or(VaultError::MathOverflow)?;
-    require!(time_to_maturity > 0, VaultError::DepositDeadlinePassed);
 
     require!(amount >= min_deposit_amount, VaultError::DepositTooSmall);
 
@@ -83,8 +88,6 @@ pub fn handle_deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
     if whitelist_enabled {
         let permit = ctx.accounts.permit.as_mut()
             .ok_or(VaultError::NotWhitelisted)?;
-        require!(permit.pool == pool_key, VaultError::NotWhitelisted);
-        require!(permit.user == ctx.accounts.user.key(), VaultError::NotWhitelisted);
         if permit.expires_at > 0 {
             require!(now <= permit.expires_at, VaultError::PermitExpired);
         }
@@ -98,7 +101,7 @@ pub fn handle_deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
     }
 
     // Calculate yield token mint amount
-    let mint_amount = calc_expected_return(amount, apy_bps, time_to_maturity as u64)?;
+    let mint_amount = calc_expected_return(amount, apr_bps, time_to_maturity as u64)?;
 
     // Update pool totals
     let pool = &mut ctx.accounts.pool;
@@ -144,19 +147,16 @@ pub fn handle_deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         mint_amount,
     )?;
 
+    emit!(DepositEvent {
+        pool: pool_key,
+        user: ctx.accounts.user.key(),
+        amount,
+        y_tokens_minted: mint_amount,
+        total_deposited: ctx.accounts.pool.total_deposited,
+        ts: now,
+    });
+
     Ok(())
 }
 
-fn calc_expected_return(amount: u64, apy_bps: u16, duration_secs: u64) -> Result<u64> {
-    let interest = (amount as u128)
-        .checked_mul(apy_bps as u128)
-        .ok_or(VaultError::MathOverflow)?
-        .checked_mul(duration_secs as u128)
-        .ok_or(VaultError::MathOverflow)?
-        .checked_div(315_360_000_000u128) // 10_000 * 365 * 24 * 3600
-        .ok_or(VaultError::MathOverflow)?;
-    let total = (amount as u128)
-        .checked_add(interest)
-        .ok_or(VaultError::MathOverflow)?;
-    Ok(total as u64)
-}
+

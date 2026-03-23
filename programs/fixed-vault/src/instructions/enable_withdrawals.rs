@@ -1,16 +1,18 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::VaultError;
+use crate::events::EnableWithdrawalsEvent;
 use crate::state::{ProtocolConfig, VaultPool};
 
 #[derive(Accounts)]
 pub struct EnableWithdrawals<'info> {
-    #[account(
-        constraint = authority.key() == config.authority @ VaultError::Unauthorized,
-    )]
     pub authority: Signer<'info>,
 
-    #[account(seeds = [b"protocol-config"], bump = config.bump)]
+    #[account(
+        seeds = [b"protocol-config"],
+        bump = config.bump,
+        has_one = authority @ VaultError::Unauthorized,
+    )]
     pub config: Account<'info, ProtocolConfig>,
 
     #[account(
@@ -23,12 +25,26 @@ pub struct EnableWithdrawals<'info> {
 
 pub fn handle_enable_withdrawals(ctx: Context<EnableWithdrawals>) -> Result<()> {    let now = Clock::get()?.unix_timestamp;
     require!(
+        !ctx.accounts.pool.withdrawals_enabled,
+        VaultError::WithdrawalsAlreadyEnabled
+    );
+    require!(
         now >= ctx.accounts.pool.maturity_ts,
         VaultError::MaturityNotReached
-    );    require!(
+    );
+    require!(
         ctx.accounts.pool.remaining_repay > 0,
         VaultError::NoRepayToDistribute
     );
     ctx.accounts.pool.withdrawals_enabled = true;
+
+    emit!(EnableWithdrawalsEvent {
+        pool: ctx.accounts.pool.key(),
+        authority: ctx.accounts.authority.key(),
+        total_repaid: ctx.accounts.pool.total_repaid,
+        total_expected_return: ctx.accounts.pool.total_expected_return,
+        ts: now,
+    });
+
     Ok(())
 }

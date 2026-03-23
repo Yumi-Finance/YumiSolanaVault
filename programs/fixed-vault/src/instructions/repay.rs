@@ -2,17 +2,19 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
 use crate::errors::VaultError;
+use crate::events::RepayEvent;
 use crate::state::{ProtocolConfig, VaultPool};
 
 #[derive(Accounts)]
 pub struct Repay<'info> {
-    #[account(
-        mut,
-        constraint = authority.key() == config.authority @ VaultError::Unauthorized,
-    )]
+    #[account(mut)]
     pub authority: Signer<'info>,
 
-    #[account(seeds = [b"protocol-config"], bump = config.bump)]
+    #[account(
+        seeds = [b"protocol-config"],
+        bump = config.bump,
+        has_one = authority @ VaultError::Unauthorized,
+    )]
     pub config: Account<'info, ProtocolConfig>,
 
     #[account(
@@ -24,8 +26,8 @@ pub struct Repay<'info> {
 
     #[account(
         mut,
-        constraint = admin_token_account.mint == pool.deposit_mint,
-        constraint = admin_token_account.owner == authority.key(),
+        token::mint = pool.deposit_mint,
+        token::authority = authority,
     )]
     pub admin_token_account: Account<'info, TokenAccount>,
 
@@ -40,6 +42,14 @@ pub struct Repay<'info> {
 
 pub fn handle_repay(ctx: Context<Repay>, amount: u64) -> Result<()> {
     require!(!ctx.accounts.pool.withdrawals_enabled, VaultError::RepayAfterWithdrawalsEnabled);
+    require!(ctx.accounts.pool.total_expected_return > 0, VaultError::NoRepayToDistribute);
+    if !ctx.accounts.pool.allow_overpay {
+        require!(
+            ctx.accounts.pool.total_repaid.checked_add(amount).ok_or(VaultError::MathOverflow)?
+                <= ctx.accounts.pool.total_expected_return,
+            VaultError::RepayExceedsCap
+        );
+    }
 
     token::transfer(
         CpiContext::new(
@@ -62,6 +72,15 @@ pub fn handle_repay(ctx: Context<Repay>, amount: u64) -> Result<()> {
         .remaining_repay
         .checked_add(amount)
         .ok_or(VaultError::MathOverflow)?;
+
+    emit!(RepayEvent {
+        pool: pool.key(),
+        authority: ctx.accounts.authority.key(),
+        amount,
+        total_repaid: pool.total_repaid,
+        remaining_repay: pool.remaining_repay,
+        ts: Clock::get()?.unix_timestamp,
+    });
 
     Ok(())
 }

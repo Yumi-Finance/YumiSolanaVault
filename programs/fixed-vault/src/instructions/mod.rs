@@ -9,6 +9,7 @@ pub mod update_pool;
 pub mod grant_permit;
 pub mod revoke_permit;
 pub mod enable_withdrawals;
+pub mod sweep_repay_vault;
 
 pub use init_config::*;
 pub use transfer_authority::*;
@@ -21,3 +22,4 @@ pub use update_pool::*;
 pub use grant_permit::*;
 pub use revoke_permit::*;
 pub use enable_withdrawals::*;
+pub use sweep_repay_vault::*;

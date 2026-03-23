@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/fixed_vault.json`.
  */
 export type FixedVault = {
-  "address": "B8b7tz681buonvw7mb6rV5CABPy3fTekETea8tdQj8Kb",
+  "address": "T4PVVqVnC8AxD9FbPEsPnwJkq957RfpwV41ZTLN8Xit",
   "metadata": {
     "name": "fixedVault",
     "version": "0.1.0",
@@ -77,7 +77,10 @@ export type FixedVault = {
         {
           "name": "authority",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",
@@ -145,7 +148,6 @@ export type FixedVault = {
       "accounts": [
         {
           "name": "user",
-          "writable": true,
           "signer": true
         },
         {
@@ -174,7 +176,30 @@ export type FixedVault = {
             "Optional: deposit permit (required when pool.whitelist_enabled)"
           ],
           "writable": true,
-          "optional": true
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  114,
+                  109,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
         },
         {
           "name": "tokenProgram",
@@ -203,7 +228,10 @@ export type FixedVault = {
       "accounts": [
         {
           "name": "authority",
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",
@@ -255,7 +283,10 @@ export type FixedVault = {
         {
           "name": "authority",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",
@@ -403,7 +434,10 @@ export type FixedVault = {
         {
           "name": "authority",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",
@@ -559,7 +593,10 @@ export type FixedVault = {
       "accounts": [
         {
           "name": "authority",
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",
@@ -613,7 +650,10 @@ export type FixedVault = {
         {
           "name": "authority",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",
@@ -682,7 +722,10 @@ export type FixedVault = {
         {
           "name": "authority",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",
@@ -712,7 +755,10 @@ export type FixedVault = {
           }
         },
         {
-          "name": "pool"
+          "name": "pool",
+          "relations": [
+            "permit"
+          ]
         },
         {
           "name": "permit",
@@ -746,6 +792,73 @@ export type FixedVault = {
       "args": []
     },
     {
+      "name": "sweepRepayVault",
+      "discriminator": [
+        193,
+        28,
+        190,
+        50,
+        16,
+        108,
+        22,
+        7
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  45,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "repayVault",
+          "writable": true
+        },
+        {
+          "name": "adminTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "updatePool",
       "discriminator": [
         239,
@@ -760,7 +873,10 @@ export type FixedVault = {
       "accounts": [
         {
           "name": "authority",
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",
@@ -820,7 +936,6 @@ export type FixedVault = {
       "accounts": [
         {
           "name": "user",
-          "writable": true,
           "signer": true
         },
         {
@@ -894,6 +1009,73 @@ export type FixedVault = {
         105,
         18,
         195
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "adminWithdrawEvent",
+      "discriminator": [
+        209,
+        205,
+        149,
+        148,
+        126,
+        161,
+        184,
+        237
+      ]
+    },
+    {
+      "name": "depositEvent",
+      "discriminator": [
+        120,
+        248,
+        61,
+        83,
+        31,
+        142,
+        107,
+        144
+      ]
+    },
+    {
+      "name": "enableWithdrawalsEvent",
+      "discriminator": [
+        254,
+        83,
+        37,
+        137,
+        244,
+        199,
+        197,
+        200
+      ]
+    },
+    {
+      "name": "repayEvent",
+      "discriminator": [
+        129,
+        213,
+        0,
+        108,
+        218,
+        108,
+        82,
+        140
+      ]
+    },
+    {
+      "name": "withdrawEvent",
+      "discriminator": [
+        22,
+        9,
+        133,
+        26,
+        160,
+        44,
+        71,
+        192
       ]
     }
   ],
@@ -977,9 +1159,119 @@ export type FixedVault = {
       "code": 6015,
       "name": "invalidMaturity",
       "msg": "Maturity timestamp must be in the future"
+    },
+    {
+      "code": 6016,
+      "name": "decimalsTooHigh",
+      "msg": "Deposit mint decimals must be <= 9"
+    },
+    {
+      "code": 6017,
+      "name": "invalidDeadlineOffset",
+      "msg": "Deposit deadline offset must be less than pool duration"
+    },
+    {
+      "code": 6018,
+      "name": "withdrawalTooSmall",
+      "msg": "Withdrawal amount must be greater than zero"
+    },
+    {
+      "code": 6019,
+      "name": "repayExceedsCap",
+      "msg": "Repay amount would exceed total expected return"
+    },
+    {
+      "code": 6020,
+      "name": "cannotRevokeOverpay",
+      "msg": "allow_overpay flag cannot be revoked once enabled"
+    },
+    {
+      "code": 6021,
+      "name": "sweepGracePeriodNotElapsed",
+      "msg": "Sweep grace period (180 days post-maturity) has not elapsed"
+    },
+    {
+      "code": 6022,
+      "name": "nothingToSweep",
+      "msg": "Repay vault is empty, nothing to sweep"
+    },
+    {
+      "code": 6023,
+      "name": "noRepayRemaining",
+      "msg": "No repay funds remaining for withdrawal"
+    },
+    {
+      "code": 6024,
+      "name": "aprTooHigh",
+      "msg": "APR exceeds maximum allowed basis points (4000 bps = 40%)"
+    },
+    {
+      "code": 6025,
+      "name": "withdrawalsAlreadyEnabled",
+      "msg": "Withdrawals have already been enabled"
     }
   ],
   "types": [
+    {
+      "name": "adminWithdrawEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "totalAdminWithdrawn",
+            "type": "u64"
+          },
+          {
+            "name": "ts",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "depositEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "yTokensMinted",
+            "type": "u64"
+          },
+          {
+            "name": "totalDeposited",
+            "type": "u64"
+          },
+          {
+            "name": "ts",
+            "type": "i64"
+          }
+        ]
+      }
+    },
     {
       "name": "depositPermit",
       "type": {
@@ -1031,6 +1323,34 @@ export type FixedVault = {
       }
     },
     {
+      "name": "enableWithdrawalsEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "totalRepaid",
+            "type": "u64"
+          },
+          {
+            "name": "totalExpectedReturn",
+            "type": "u64"
+          },
+          {
+            "name": "ts",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "initPoolParams",
       "type": {
         "kind": "struct",
@@ -1040,7 +1360,7 @@ export type FixedVault = {
             "type": "u64"
           },
           {
-            "name": "apyBps",
+            "name": "aprBps",
             "type": "u16"
           },
           {
@@ -1098,6 +1418,38 @@ export type FixedVault = {
       }
     },
     {
+      "name": "repayEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "totalRepaid",
+            "type": "u64"
+          },
+          {
+            "name": "remainingRepay",
+            "type": "u64"
+          },
+          {
+            "name": "ts",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "updatePoolParams",
       "type": {
         "kind": "struct",
@@ -1115,9 +1467,15 @@ export type FixedVault = {
             }
           },
           {
-            "name": "apyBps",
+            "name": "aprBps",
             "type": {
               "option": "u16"
+            }
+          },
+          {
+            "name": "allowOverpay",
+            "type": {
+              "option": "bool"
             }
           }
         ]
@@ -1164,9 +1522,9 @@ export type FixedVault = {
             "type": "pubkey"
           },
           {
-            "name": "apyBps",
+            "name": "aprBps",
             "docs": [
-              "APY in basis points (e.g. 800 = 8%)"
+              "APR in basis points (e.g. 800 = 8%)"
             ],
             "type": "u16"
           },
@@ -1248,6 +1606,20 @@ export type FixedVault = {
             "type": "bool"
           },
           {
+            "name": "allowOverpay",
+            "docs": [
+              "Allow repay amounts exceeding total_expected_return (e.g. goodwill bonus)"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "totalSwept",
+            "docs": [
+              "Total amount swept by admin from repay_vault after grace period (orphaned funds)"
+            ],
+            "type": "u64"
+          },
+          {
             "name": "bump",
             "docs": [
               "PDA bump"
@@ -1274,6 +1646,38 @@ export type FixedVault = {
               "Yield mint PDA bump"
             ],
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "withdrawEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "yTokensBurned",
+            "type": "u64"
+          },
+          {
+            "name": "payout",
+            "type": "u64"
+          },
+          {
+            "name": "remainingRepay",
+            "type": "u64"
+          },
+          {
+            "name": "ts",
+            "type": "i64"
           }
         ]
       }

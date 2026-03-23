@@ -2,11 +2,11 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount, Transfer};
 
 use crate::errors::VaultError;
+use crate::events::WithdrawEvent;
 use crate::state::VaultPool;
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
-    #[account(mut)]
     pub user: Signer<'info>,
 
     #[account(
@@ -24,8 +24,8 @@ pub struct Withdraw<'info> {
 
     #[account(
         mut,
-        constraint = user_yield_account.mint == pool.yield_mint,
-        constraint = user_yield_account.owner == user.key(),
+        token::mint = yield_mint,
+        token::authority = user,
     )]
     pub user_yield_account: Account<'info, TokenAccount>,
 
@@ -37,8 +37,8 @@ pub struct Withdraw<'info> {
 
     #[account(
         mut,
-        constraint = user_token_account.mint == pool.deposit_mint,
-        constraint = user_token_account.owner == user.key(),
+        token::mint = pool.deposit_mint,
+        token::authority = user,
     )]
     pub user_token_account: Account<'info, TokenAccount>,
 
@@ -46,9 +46,11 @@ pub struct Withdraw<'info> {
 }
 
 pub fn handle_withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
+    require!(amount > 0, VaultError::WithdrawalTooSmall);
     let clock = Clock::get()?;
     require!(clock.unix_timestamp >= ctx.accounts.pool.maturity_ts, VaultError::MaturityNotReached);
     require!(ctx.accounts.pool.withdrawals_enabled, VaultError::WithdrawalsNotEnabled);
+    require!(ctx.accounts.pool.remaining_repay > 0, VaultError::NoRepayRemaining);
 
     let pool_id = ctx.accounts.pool.pool_id;
     let pool_bump = ctx.accounts.pool.bump;
@@ -108,6 +110,15 @@ pub fn handle_withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
         .remaining_repay
         .checked_sub(payout)
         .ok_or(VaultError::MathOverflow)?;
+
+    emit!(WithdrawEvent {
+        pool: pool.key(),
+        user: ctx.accounts.user.key(),
+        y_tokens_burned: amount,
+        payout,
+        remaining_repay: pool.remaining_repay,
+        ts: clock.unix_timestamp,
+    });
 
     Ok(())
 }

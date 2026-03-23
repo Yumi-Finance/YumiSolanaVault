@@ -34,4 +34,24 @@ pub enum VaultError {
     PermitLimitExceeded,
     #[msg("Maturity timestamp must be in the future")]
     InvalidMaturity,
+    #[msg("Deposit mint decimals must be <= 9")]
+    DecimalsTooHigh,
+    #[msg("Deposit deadline offset must be less than pool duration")]
+    InvalidDeadlineOffset,
+    #[msg("Withdrawal amount must be greater than zero")]
+    WithdrawalTooSmall,
+    #[msg("Repay amount would exceed total expected return")]
+    RepayExceedsCap,
+    #[msg("allow_overpay flag cannot be revoked once enabled")]
+    CannotRevokeOverpay,
+    #[msg("Sweep grace period (180 days post-maturity) has not elapsed")]
+    SweepGracePeriodNotElapsed,
+    #[msg("Repay vault is empty, nothing to sweep")]
+    NothingToSweep,
+    #[msg("No repay funds remaining for withdrawal")]
+    NoRepayRemaining,
+    #[msg("APR exceeds maximum allowed basis points (4000 bps = 40%)")]
+    AprTooHigh,
+    #[msg("Withdrawals have already been enabled")]
+    WithdrawalsAlreadyEnabled,
 }

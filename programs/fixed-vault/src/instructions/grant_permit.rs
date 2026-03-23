@@ -6,13 +6,14 @@ use crate::state::{DepositPermit, ProtocolConfig, VaultPool};
 #[derive(Accounts)]
 #[instruction(user: Pubkey)]
 pub struct GrantPermit<'info> {
-    #[account(
-        mut,
-        constraint = authority.key() == config.authority @ VaultError::Unauthorized,
-    )]
+    #[account(mut)]
     pub authority: Signer<'info>,
 
-    #[account(seeds = [b"protocol-config"], bump = config.bump)]
+    #[account(
+        seeds = [b"protocol-config"],
+        bump = config.bump,
+        has_one = authority @ VaultError::Unauthorized,
+    )]
     pub config: Account<'info, ProtocolConfig>,
 
     #[account(
@@ -39,6 +40,9 @@ pub fn handle_grant_permit(
     max_amount: u64,
     expires_at: i64,
 ) -> Result<()> {
+    let now = Clock::get()?.unix_timestamp;
+    require!(expires_at == 0 || expires_at > now, VaultError::PermitExpired);
+
     let permit = &mut ctx.accounts.permit;
     permit.pool = ctx.accounts.pool.key();
     permit.user = user;

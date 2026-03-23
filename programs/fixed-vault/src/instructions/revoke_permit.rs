@@ -5,13 +5,14 @@ use crate::state::{DepositPermit, ProtocolConfig, VaultPool};
 
 #[derive(Accounts)]
 pub struct RevokePermit<'info> {
-    #[account(
-        mut,
-        constraint = authority.key() == config.authority @ VaultError::Unauthorized,
-    )]
+    #[account(mut)]
     pub authority: Signer<'info>,
 
-    #[account(seeds = [b"protocol-config"], bump = config.bump)]
+    #[account(
+        seeds = [b"protocol-config"],
+        bump = config.bump,
+        has_one = authority @ VaultError::Unauthorized,
+    )]
     pub config: Account<'info, ProtocolConfig>,
 
     #[account(
@@ -25,7 +26,7 @@ pub struct RevokePermit<'info> {
         close = authority,
         seeds = [b"permit", pool.key().as_ref(), permit.user.as_ref()],
         bump = permit.bump,
-        constraint = permit.pool == pool.key(),
+        has_one = pool,
     )]
     pub permit: Account<'info, DepositPermit>,
 }

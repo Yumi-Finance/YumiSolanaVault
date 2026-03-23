@@ -15,7 +15,7 @@ import {
   daysToMaturity,
   depositDeadlineTs,
   userExpectedReturn,
-  apyBpsToPercent,
+  aprBpsToPercent,
 } from "@/lib/client";
 import { NETWORKS } from "@/lib/constants";
 
@@ -46,7 +46,7 @@ function PoolCard({
 }) {
   const matured = VaultClient.isMatured(pool.maturityTs);
   const depositOpen = VaultClient.isDepositOpen(pool.maturityTs, pool.depositDeadlineOffset);
-  const apyPct = apyBpsToPercent(pool.apyBps);
+  const apyPct = aprBpsToPercent(pool.aprBps);
 
   /* Progress bar: total deposited / pool cap */
   const fillPct = poolFillPercent(pool);
@@ -410,7 +410,7 @@ export default function Home() {
           {depositTarget && (
             <p className="text-xs text-zinc-500">
               Min: {lamportsToUi(depositTarget.pool.minDepositAmount, 6)} · APY:{" "}
-              {apyBpsToPercent(depositTarget.pool.apyBps)}%
+              {aprBpsToPercent(depositTarget.pool.aprBps)}%
             </p>
           )}
           <button
