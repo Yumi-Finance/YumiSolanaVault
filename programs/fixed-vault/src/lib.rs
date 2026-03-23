@@ -10,7 +10,7 @@ use instructions::*;
 
 declare_id!("T4PVVqVnC8AxD9FbPEsPnwJkq957RfpwV41ZTLN8Xit");
 
-pub const BOOTSTRAP_AUTHORITY: Pubkey = pubkey!("33Qc8SgCsHVoNgb75CKmSHkp63jiMTqJiZrBfznhcPwx");
+pub const BOOTSTRAP_AUTHORITY: Pubkey = pubkey!("6DNea46d5vHvHoawY5ihh9aJrXhYAvjkaNJafwKEMhH9");
 
 /// Maximum allowed APR in basis points (4000 bps = 40%)
 pub const MAX_APR_BPS: u16 = 4000;
