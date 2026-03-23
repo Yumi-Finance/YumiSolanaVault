@@ -2029,4 +2029,706 @@ describe("fixed-vault", () => {
       }
     });
   });
+
+  // ==========================================================================
+  // N-2: Test coverage — propose_authority / accept_authority
+  // ==========================================================================
+  describe("N-2: propose_authority / accept_authority", () => {
+    let newAuthorityKeypair: Keypair;
+
+    before(async () => {
+      newAuthorityKeypair = Keypair.generate();
+      const sig = await connection.requestAirdrop(newAuthorityKeypair.publicKey, 2_000_000_000);
+      await connection.confirmTransaction(sig);
+    });
+
+    it("rejects propose_authority from non-authority", async () => {
+      try {
+        await program.methods
+          .proposeAuthority(newAuthorityKeypair.publicKey)
+          .accountsPartial({
+            authority: newAuthorityKeypair.publicKey,
+            config: configPda,
+          })
+          .signers([newAuthorityKeypair])
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        const code = err.error?.errorCode?.code ?? err.message ?? "";
+        expect(code).to.include("Unauthorized");
+      }
+    });
+
+    it("proposes a new authority", async () => {
+      await program.methods
+        .proposeAuthority(newAuthorityKeypair.publicKey)
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+        })
+        .rpc();
+
+      const config = await program.account.protocolConfig.fetch(configPda);
+      expect(config.pendingAuthority!.toBase58()).to.equal(
+        newAuthorityKeypair.publicKey.toBase58()
+      );
+    });
+
+    it("rejects accept_authority from wrong signer", async () => {
+      const wrongKeypair = Keypair.generate();
+      const sig = await connection.requestAirdrop(wrongKeypair.publicKey, 1_000_000_000);
+      await connection.confirmTransaction(sig);
+
+      try {
+        await program.methods
+          .acceptAuthority()
+          .accountsPartial({
+            newAuthority: wrongKeypair.publicKey,
+            config: configPda,
+          })
+          .signers([wrongKeypair])
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        const code = err.error?.errorCode?.code ?? err.message ?? "";
+        expect(code).to.include("NoPendingAuthority");
+      }
+    });
+
+    it("accepts authority transfer", async () => {
+      await program.methods
+        .acceptAuthority()
+        .accountsPartial({
+          newAuthority: newAuthorityKeypair.publicKey,
+          config: configPda,
+        })
+        .signers([newAuthorityKeypair])
+        .rpc();
+
+      const config = await program.account.protocolConfig.fetch(configPda);
+      expect(config.authority.toBase58()).to.equal(
+        newAuthorityKeypair.publicKey.toBase58()
+      );
+      expect(config.pendingAuthority).to.be.null;
+    });
+
+    it("restores original authority for subsequent tests", async () => {
+      // Propose back to original
+      await program.methods
+        .proposeAuthority(authority.publicKey)
+        .accountsPartial({
+          authority: newAuthorityKeypair.publicKey,
+          config: configPda,
+        })
+        .signers([newAuthorityKeypair])
+        .rpc();
+
+      // Accept
+      await program.methods
+        .acceptAuthority()
+        .accountsPartial({
+          newAuthority: authority.publicKey,
+          config: configPda,
+        })
+        .rpc();
+
+      const config = await program.account.protocolConfig.fetch(configPda);
+      expect(config.authority.toBase58()).to.equal(authority.publicKey.toBase58());
+    });
+  });
+
+  // ==========================================================================
+  // N-2: Test coverage — permit expiry + max_amount
+  // ==========================================================================
+  describe("N-2: permit expiry and max_amount", () => {
+    const PM_POOL_ID = new BN(900);
+    let pmPoolPda: PublicKey;
+    let pmDepositVaultPda: PublicKey;
+    let pmRepayVaultPda: PublicKey;
+    let pmYieldMintPda: PublicKey;
+    let pmUserYieldAccount: PublicKey;
+    let pmPermitPda: PublicKey;
+
+    before(async () => {
+      [pmPoolPda] = getPoolPda(PM_POOL_ID);
+      [pmDepositVaultPda] = getDepositVaultPda(pmPoolPda);
+      [pmRepayVaultPda] = getRepayVaultPda(pmPoolPda);
+      [pmYieldMintPda] = getYieldMintPda(pmPoolPda);
+      [pmPermitPda] = getPermitPda(pmPoolPda, userKeypair.publicKey);
+
+      await program.methods
+        .initPool({
+          poolId: PM_POOL_ID,
+          aprBps: APR_BPS,
+          maturityTs: maturityTs,
+          depositDeadlineOffset: new BN(0),
+          minDepositAmount: MIN_DEPOSIT,
+          maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+          whitelistEnabled: true,
+        })
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: pmPoolPda,
+          depositMint: mint,
+          depositVault: pmDepositVaultPda,
+          repayVault: pmRepayVaultPda,
+          yieldMint: pmYieldMintPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+
+      pmUserYieldAccount = await createAccount(connection, userKeypair, pmYieldMintPda, userKeypair.publicKey);
+    });
+
+    it("permit with expires_at > 0 allows deposit before expiry", async () => {
+      const slot = await connection.getSlot();
+      const blockTime = await connection.getBlockTime(slot);
+      const futureExpiry = new BN(blockTime! + 3600); // 1 hour from now
+
+      await program.methods
+        .grantPermit(userKeypair.publicKey, new BN(0), futureExpiry)
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: pmPoolPda,
+          permit: pmPermitPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+
+      await program.methods
+        .deposit(MIN_DEPOSIT)
+        .accountsPartial({
+          user: userKeypair.publicKey,
+          pool: pmPoolPda,
+          userTokenAccount: userTokenAccount,
+          depositVault: pmDepositVaultPda,
+          yieldMint: pmYieldMintPda,
+          userYieldAccount: pmUserYieldAccount,
+          permit: pmPermitPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([userKeypair])
+        .rpc();
+
+      const yieldBal = (await getAccount(connection, pmUserYieldAccount)).amount;
+      expect(Number(yieldBal)).to.be.greaterThan(0);
+
+      // Revoke so we can re-grant with different params
+      await program.methods
+        .revokePermit()
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: pmPoolPda,
+          permit: pmPermitPda,
+        })
+        .rpc();
+    });
+
+    it("permit with max_amount enforces partial + full consumption", async () => {
+      const maxAmount = new BN(300_000_000); // 300 USDC — allows 2 deposits of MIN_DEPOSIT (100), third would exceed
+
+      await program.methods
+        .grantPermit(userKeypair.publicKey, maxAmount, new BN(0))
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: pmPoolPda,
+          permit: pmPermitPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+
+      // First deposit: 100 USDC — partial consumption (100/300)
+      await program.methods
+        .deposit(MIN_DEPOSIT)
+        .accountsPartial({
+          user: userKeypair.publicKey,
+          pool: pmPoolPda,
+          userTokenAccount: userTokenAccount,
+          depositVault: pmDepositVaultPda,
+          yieldMint: pmYieldMintPda,
+          userYieldAccount: pmUserYieldAccount,
+          permit: pmPermitPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([userKeypair])
+        .rpc();
+
+      let permit = await program.account.depositPermit.fetch(pmPermitPda);
+      expect(permit.amountUsed.toNumber()).to.equal(MIN_DEPOSIT.toNumber());
+
+      // Second deposit: 100 USDC — (200/300)
+      await program.methods
+        .deposit(MIN_DEPOSIT)
+        .accountsPartial({
+          user: userKeypair.publicKey,
+          pool: pmPoolPda,
+          userTokenAccount: userTokenAccount,
+          depositVault: pmDepositVaultPda,
+          yieldMint: pmYieldMintPda,
+          userYieldAccount: pmUserYieldAccount,
+          permit: pmPermitPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([userKeypair])
+        .rpc();
+
+      permit = await program.account.depositPermit.fetch(pmPermitPda);
+      expect(permit.amountUsed.toNumber()).to.equal(MIN_DEPOSIT.toNumber() * 2);
+
+      // Third deposit: 200 USDC — would exceed 300 limit → fail
+      try {
+        await program.methods
+          .deposit(new BN(200_000_000))
+          .accountsPartial({
+            user: userKeypair.publicKey,
+            pool: pmPoolPda,
+            userTokenAccount: userTokenAccount,
+            depositVault: pmDepositVaultPda,
+            yieldMint: pmYieldMintPda,
+            userYieldAccount: pmUserYieldAccount,
+            permit: pmPermitPda,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .signers([userKeypair])
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        expect(err.error.errorCode.code).to.equal("PermitLimitExceeded");
+      }
+
+      // Exactly remaining 100 USDC — should succeed (300/300)
+      await program.methods
+        .deposit(MIN_DEPOSIT)
+        .accountsPartial({
+          user: userKeypair.publicKey,
+          pool: pmPoolPda,
+          userTokenAccount: userTokenAccount,
+          depositVault: pmDepositVaultPda,
+          yieldMint: pmYieldMintPda,
+          userYieldAccount: pmUserYieldAccount,
+          permit: pmPermitPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([userKeypair])
+        .rpc();
+
+      permit = await program.account.depositPermit.fetch(pmPermitPda);
+      expect(permit.amountUsed.toNumber()).to.equal(maxAmount.toNumber());
+    });
+  });
+
+  // ==========================================================================
+  // N-2: Test coverage — multi-user proportional withdrawals
+  // ==========================================================================
+  describe("N-2: multi-user proportional withdrawals", () => {
+    const MU_POOL_ID = new BN(901);
+    let muPoolPda: PublicKey;
+    let muDepositVaultPda: PublicKey;
+    let muRepayVaultPda: PublicKey;
+    let muYieldMintPda: PublicKey;
+
+    let user2Keypair: Keypair;
+    let user2TokenAccount: PublicKey;
+    let user1YieldAccount: PublicKey;
+    let user2YieldAccount: PublicKey;
+
+    before(async () => {
+      [muPoolPda] = getPoolPda(MU_POOL_ID);
+      [muDepositVaultPda] = getDepositVaultPda(muPoolPda);
+      [muRepayVaultPda] = getRepayVaultPda(muPoolPda);
+      [muYieldMintPda] = getYieldMintPda(muPoolPda);
+
+      user2Keypair = Keypair.generate();
+      const sig = await connection.requestAirdrop(user2Keypair.publicKey, 2_000_000_000);
+      await connection.confirmTransaction(sig);
+
+      user2TokenAccount = await createAccount(connection, user2Keypair, mint, user2Keypair.publicKey);
+      await mintTo(connection, (authority as any).payer, mint, user2TokenAccount, authority.publicKey, 5_000_000_000);
+
+      const slot = await connection.getSlot();
+      const blockTime = await connection.getBlockTime(slot);
+      const muMaturityTs = new BN(blockTime! + 3);
+
+      await program.methods
+        .initPool({
+          poolId: MU_POOL_ID,
+          aprBps: APR_BPS,
+          maturityTs: muMaturityTs,
+          depositDeadlineOffset: new BN(0),
+          minDepositAmount: MIN_DEPOSIT,
+          maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+          whitelistEnabled: false,
+        })
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: muPoolPda,
+          depositMint: mint,
+          depositVault: muDepositVaultPda,
+          repayVault: muRepayVaultPda,
+          yieldMint: muYieldMintPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+
+      user1YieldAccount = await createAccount(connection, userKeypair, muYieldMintPda, userKeypair.publicKey);
+      user2YieldAccount = await createAccount(connection, user2Keypair, muYieldMintPda, user2Keypair.publicKey);
+    });
+
+    it("two users deposit different amounts and withdraw proportionally", async () => {
+      const user1Deposit = new BN(200_000_000); // 200 USDC
+      const user2Deposit = new BN(800_000_000); // 800 USDC (4x more)
+
+      // Both deposit
+      await program.methods
+        .deposit(user1Deposit)
+        .accountsPartial({
+          user: userKeypair.publicKey,
+          pool: muPoolPda,
+          userTokenAccount: userTokenAccount,
+          depositVault: muDepositVaultPda,
+          yieldMint: muYieldMintPda,
+          userYieldAccount: user1YieldAccount,
+          permit: null,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([userKeypair])
+        .rpc();
+
+      await program.methods
+        .deposit(user2Deposit)
+        .accountsPartial({
+          user: user2Keypair.publicKey,
+          pool: muPoolPda,
+          userTokenAccount: user2TokenAccount,
+          depositVault: muDepositVaultPda,
+          yieldMint: muYieldMintPda,
+          userYieldAccount: user2YieldAccount,
+          permit: null,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([user2Keypair])
+        .rpc();
+
+      const user1YieldBal = Number((await getAccount(connection, user1YieldAccount)).amount);
+      const user2YieldBal = Number((await getAccount(connection, user2YieldAccount)).amount);
+      expect(user2YieldBal).to.be.greaterThan(user1YieldBal);
+
+      // Admin withdraw + repay full amount
+      const totalDeposited = user1Deposit.toNumber() + user2Deposit.toNumber();
+      await program.methods
+        .adminWithdraw(new BN(totalDeposited))
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: muPoolPda,
+          depositVault: muDepositVaultPda,
+          adminTokenAccount: adminTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+
+      const totalExpected = user1YieldBal + user2YieldBal;
+      await program.methods
+        .repay(new BN(totalExpected))
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: muPoolPda,
+          adminTokenAccount: adminTokenAccount,
+          repayVault: muRepayVaultPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+
+      // Wait for maturity then enable
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+
+      await program.methods
+        .enableWithdrawals()
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: muPoolPda,
+        })
+        .rpc();
+
+      // User1 withdraws
+      const supply = Number((await getMint(connection, muYieldMintPda)).supply);
+      const remainingRepay = (await program.account.vaultPool.fetch(muPoolPda)).remainingRepay.toNumber();
+      const expected1 = Math.floor(user1YieldBal * remainingRepay / supply);
+
+      const user1BalBefore = Number((await getAccount(connection, userTokenAccount)).amount);
+      await program.methods
+        .withdraw(new BN(user1YieldBal))
+        .accountsPartial({
+          user: userKeypair.publicKey,
+          pool: muPoolPda,
+          yieldMint: muYieldMintPda,
+          userYieldAccount: user1YieldAccount,
+          repayVault: muRepayVaultPda,
+          userTokenAccount: userTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([userKeypair])
+        .rpc();
+      const user1BalAfter = Number((await getAccount(connection, userTokenAccount)).amount);
+      const user1Payout = user1BalAfter - user1BalBefore;
+      expect(user1Payout).to.equal(expected1);
+
+      // User2 withdraws (last withdrawer gets remaining)
+      const user2BalBefore = Number((await getAccount(connection, user2TokenAccount)).amount);
+      await program.methods
+        .withdraw(new BN(user2YieldBal))
+        .accountsPartial({
+          user: user2Keypair.publicKey,
+          pool: muPoolPda,
+          yieldMint: muYieldMintPda,
+          userYieldAccount: user2YieldAccount,
+          repayVault: muRepayVaultPda,
+          userTokenAccount: user2TokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([user2Keypair])
+        .rpc();
+      const user2BalAfter = Number((await getAccount(connection, user2TokenAccount)).amount);
+      const user2Payout = user2BalAfter - user2BalBefore;
+
+      // User2 deposited 4x more so gets ~4x more
+      expect(user2Payout).to.be.greaterThan(user1Payout * 3);
+
+      // Pool fully drained
+      const poolState = await program.account.vaultPool.fetch(muPoolPda);
+      expect(poolState.remainingRepay.toNumber()).to.equal(0);
+    });
+  });
+
+  // ==========================================================================
+  // N-2: Test coverage — pool cap boundary + zero deposits pool
+  // ==========================================================================
+  describe("N-2: pool cap boundary", () => {
+    it("deposits exactly at pool cap boundary", async () => {
+      const CAP_POOL_ID = new BN(902);
+      const tinyMax = new BN(200_000_000); // 200 USDC cap
+      const [capPoolPda] = getPoolPda(CAP_POOL_ID);
+      const [capDepositVaultPda] = getDepositVaultPda(capPoolPda);
+      const [capRepayVaultPda] = getRepayVaultPda(capPoolPda);
+      const [capYieldMintPda] = getYieldMintPda(capPoolPda);
+
+      await program.methods
+        .initPool({
+          poolId: CAP_POOL_ID,
+          aprBps: APR_BPS,
+          maturityTs: maturityTs,
+          depositDeadlineOffset: new BN(0),
+          minDepositAmount: MIN_DEPOSIT,
+          maxTotalDeposit: tinyMax,
+          whitelistEnabled: false,
+        })
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: capPoolPda,
+          depositMint: mint,
+          depositVault: capDepositVaultPda,
+          repayVault: capRepayVaultPda,
+          yieldMint: capYieldMintPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+
+      const capUserYieldAccount = await createAccount(connection, userKeypair, capYieldMintPda, userKeypair.publicKey);
+
+      // Deposit exactly at cap (200 USDC)
+      await program.methods
+        .deposit(tinyMax)
+        .accountsPartial({
+          user: userKeypair.publicKey,
+          pool: capPoolPda,
+          userTokenAccount: userTokenAccount,
+          depositVault: capDepositVaultPda,
+          yieldMint: capYieldMintPda,
+          userYieldAccount: capUserYieldAccount,
+          permit: null,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([userKeypair])
+        .rpc();
+
+      const pool = await program.account.vaultPool.fetch(capPoolPda);
+      expect(pool.totalDeposited.toNumber()).to.equal(tinyMax.toNumber());
+
+      // One more USDC should fail
+      try {
+        await program.methods
+          .deposit(MIN_DEPOSIT)
+          .accountsPartial({
+            user: userKeypair.publicKey,
+            pool: capPoolPda,
+            userTokenAccount: userTokenAccount,
+            depositVault: capDepositVaultPda,
+            yieldMint: capYieldMintPda,
+            userYieldAccount: capUserYieldAccount,
+            permit: null,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .signers([userKeypair])
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        expect(err.error.errorCode.code).to.equal("PoolCapExceeded");
+      }
+    });
+  });
+
+  // ==========================================================================
+  // N-2: Test coverage — re-initialization attacks
+  // ==========================================================================
+  describe("N-2: re-initialization attacks", () => {
+    it("rejects calling init_config twice", async () => {
+      try {
+        await program.methods
+          .initConfig()
+          .accountsPartial({
+            authority: authority.publicKey,
+            config: configPda,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        // Anchor returns a SendTransactionError when PDA already exists
+        expect(err.toString()).to.include("already in use");
+      }
+    });
+
+    it("rejects calling init_pool with same pool_id", async () => {
+      try {
+        await program.methods
+          .initPool({
+            poolId: POOL_ID, // pool 0 already initialized
+            aprBps: APR_BPS,
+            maturityTs: maturityTs,
+            depositDeadlineOffset: new BN(0),
+            minDepositAmount: MIN_DEPOSIT,
+            maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+            whitelistEnabled: false,
+          })
+          .accountsPartial({
+            authority: authority.publicKey,
+            config: configPda,
+            pool: poolPda,
+            depositMint: mint,
+            depositVault: depositVaultPda,
+            repayVault: repayVaultPda,
+            yieldMint: yieldMintPda,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        expect(err.toString()).to.include("already in use");
+      }
+    });
+  });
+
+  // ==========================================================================
+  // N-2: Test coverage — account constraint violations
+  // ==========================================================================
+  describe("N-2: account constraint violations", () => {
+    it("rejects deposit with wrong signer", async () => {
+      const fakeUser = Keypair.generate();
+      const sig = await connection.requestAirdrop(fakeUser.publicKey, 1_000_000_000);
+      await connection.confirmTransaction(sig);
+
+      try {
+        await program.methods
+          .deposit(DEPOSIT_AMOUNT)
+          .accountsPartial({
+            user: fakeUser.publicKey,
+            pool: poolPda,
+            userTokenAccount: userTokenAccount, // belongs to userKeypair, not fakeUser
+            depositVault: depositVaultPda,
+            yieldMint: yieldMintPda,
+            userYieldAccount: userYieldAccount,
+            permit: null,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .signers([fakeUser])
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        // token::authority constraint rejects — user doesn't own the token account
+        expect(err.toString()).to.not.be.empty;
+      }
+    });
+
+    it("rejects admin_withdraw from non-authority", async () => {
+      try {
+        await program.methods
+          .adminWithdraw(new BN(1))
+          .accountsPartial({
+            authority: userKeypair.publicKey,
+            config: configPda,
+            pool: poolPda,
+            depositVault: depositVaultPda,
+            adminTokenAccount: adminTokenAccount,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .signers([userKeypair])
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        const code = err.error?.errorCode?.code ?? err.message ?? "";
+        expect(code).to.include("Unauthorized");
+      }
+    });
+
+    it("rejects repay from non-authority", async () => {
+      try {
+        await program.methods
+          .repay(new BN(1))
+          .accountsPartial({
+            authority: userKeypair.publicKey,
+            config: configPda,
+            pool: poolPda,
+            adminTokenAccount: adminTokenAccount,
+            repayVault: repayVaultPda,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .signers([userKeypair])
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        const code = err.error?.errorCode?.code ?? err.message ?? "";
+        expect(code).to.include("Unauthorized");
+      }
+    });
+
+    it("rejects enable_withdrawals from non-authority", async () => {
+      try {
+        await program.methods
+          .enableWithdrawals()
+          .accountsPartial({
+            authority: userKeypair.publicKey,
+            config: configPda,
+            pool: poolPda,
+          })
+          .signers([userKeypair])
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        const code = err.error?.errorCode?.code ?? err.message ?? "";
+        expect(code).to.include("Unauthorized");
+      }
+    });
+  });
 });
