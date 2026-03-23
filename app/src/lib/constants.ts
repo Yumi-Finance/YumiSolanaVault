@@ -1,19 +1,24 @@
 import { PublicKey, clusterApiUrl } from "@solana/web3.js";
 
-export const PROGRAM_ID = new PublicKey(
-  "T4PVVqVnC8AxD9FbPEsPnwJkq957RfpwV41ZTLN8Xit"
-);
-
 export type NetworkName = "devnet" | "mainnet-beta";
+
+const devnetRpc =
+  typeof process !== "undefined" && process.env.NEXT_PUBLIC_SOLANA_RPC_DEVNET
+    ? process.env.NEXT_PUBLIC_SOLANA_RPC_DEVNET
+    : clusterApiUrl("devnet");
+const mainnetRpc =
+  typeof process !== "undefined" && process.env.NEXT_PUBLIC_SOLANA_RPC_MAINNET
+    ? process.env.NEXT_PUBLIC_SOLANA_RPC_MAINNET
+    : clusterApiUrl("mainnet-beta");
 
 export const NETWORKS: Record<NetworkName, { label: string; endpoint: string }> = {
   devnet: {
     label: "Devnet",
-    endpoint: clusterApiUrl("devnet"),
+    endpoint: devnetRpc,
   },
   "mainnet-beta": {
     label: "Mainnet",
-    endpoint: clusterApiUrl("mainnet-beta"),
+    endpoint: mainnetRpc,
   },
 };
 

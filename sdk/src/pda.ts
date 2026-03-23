@@ -1,9 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
-
-export const FIXED_VAULT_PROGRAM_ID = new PublicKey(
-  "T4PVVqVnC8AxD9FbPEsPnwJkq957RfpwV41ZTLN8Xit"
-);
+import { FIXED_VAULT_PROGRAM_ID } from "./programId";
 
 function poolIdToBuffer(poolId: BN | number): Buffer {
   const bn = typeof poolId === "number" ? new BN(poolId) : poolId;

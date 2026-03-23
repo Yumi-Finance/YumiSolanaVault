@@ -6,8 +6,12 @@ export {
   findRepayVaultPda,
   findYieldMintPda,
   findPermitPda,
-  FIXED_VAULT_PROGRAM_ID,
 } from "./pda";
+export {
+  FIXED_VAULT_PROGRAM_ID,
+  normalizeProgramId,
+} from "./programId";
+export type { ProgramIdInput } from "./programId";
 export {
   InitPoolParams,
   UpdatePoolParams,
