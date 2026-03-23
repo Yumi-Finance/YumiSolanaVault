@@ -24,6 +24,10 @@ pub struct EnableWithdrawals<'info> {
 
 pub fn handle_enable_withdrawals(ctx: Context<EnableWithdrawals>) -> Result<()> {    let now = Clock::get()?.unix_timestamp;
     require!(
+        !ctx.accounts.pool.withdrawals_enabled,
+        VaultError::WithdrawalsAlreadyEnabled
+    );
+    require!(
         now >= ctx.accounts.pool.maturity_ts,
         VaultError::MaturityNotReached
     );

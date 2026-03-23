@@ -1153,6 +1153,11 @@ export type FixedVault = {
       "code": 6024,
       "name": "aprTooHigh",
       "msg": "APR exceeds maximum allowed basis points (4000 bps = 40%)"
+    },
+    {
+      "code": 6025,
+      "name": "withdrawalsAlreadyEnabled",
+      "msg": "Withdrawals have already been enabled"
     }
   ],
   "types": [

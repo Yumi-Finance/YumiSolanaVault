@@ -1909,4 +1909,124 @@ describe("fixed-vault", () => {
       expect(events[0].payout.toNumber()).to.be.greaterThan(0);
     });
   });
+
+  // ==========================================================================
+  // Tests for N-5 fix: enable_withdrawals idempotency guard
+  // ==========================================================================
+  describe("N-5: enable_withdrawals cannot be repeated", () => {
+    const N5_POOL_ID = new BN(800);
+    let n5PoolPda: PublicKey;
+    let n5DepositVaultPda: PublicKey;
+    let n5RepayVaultPda: PublicKey;
+    let n5YieldMintPda: PublicKey;
+    let n5UserYieldAccount: PublicKey;
+
+    before(async () => {
+      [n5PoolPda] = getPoolPda(N5_POOL_ID);
+      [n5DepositVaultPda] = getDepositVaultPda(n5PoolPda);
+      [n5RepayVaultPda] = getRepayVaultPda(n5PoolPda);
+      [n5YieldMintPda] = getYieldMintPda(n5PoolPda);
+
+      const slot = await connection.getSlot();
+      const blockTime = await connection.getBlockTime(slot);
+      const n5MaturityTs = new BN(blockTime! + 3);
+
+      await program.methods
+        .initPool({
+          poolId: N5_POOL_ID,
+          aprBps: APR_BPS,
+          maturityTs: n5MaturityTs,
+          depositDeadlineOffset: new BN(0),
+          minDepositAmount: MIN_DEPOSIT,
+          maxTotalDeposit: MAX_TOTAL_DEPOSIT,
+          whitelistEnabled: false,
+        })
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: n5PoolPda,
+          depositMint: mint,
+          depositVault: n5DepositVaultPda,
+          repayVault: n5RepayVaultPda,
+          yieldMint: n5YieldMintPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+
+      n5UserYieldAccount = await createAccount(connection, userKeypair, n5YieldMintPda, userKeypair.publicKey);
+
+      // Deposit so pool has non-zero yield supply
+      await program.methods
+        .deposit(DEPOSIT_AMOUNT)
+        .accountsPartial({
+          user: userKeypair.publicKey,
+          pool: n5PoolPda,
+          userTokenAccount: userTokenAccount,
+          depositVault: n5DepositVaultPda,
+          yieldMint: n5YieldMintPda,
+          userYieldAccount: n5UserYieldAccount,
+          permit: null,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([userKeypair])
+        .rpc();
+
+      const yieldBal = (await getAccount(connection, n5UserYieldAccount)).amount;
+
+      // Admin withdraw + repay so remaining_repay > 0
+      await program.methods
+        .adminWithdraw(DEPOSIT_AMOUNT)
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: n5PoolPda,
+          depositVault: n5DepositVaultPda,
+          adminTokenAccount: adminTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+
+      await program.methods
+        .repay(new BN(Number(yieldBal)))
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: n5PoolPda,
+          adminTokenAccount: adminTokenAccount,
+          repayVault: n5RepayVaultPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+
+      // Wait for maturity then enable withdrawals once
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+
+      await program.methods
+        .enableWithdrawals()
+        .accountsPartial({
+          authority: authority.publicKey,
+          config: configPda,
+          pool: n5PoolPda,
+        })
+        .rpc();
+    });
+
+    it("rejects second call to enable_withdrawals", async () => {
+      try {
+        await program.methods
+          .enableWithdrawals()
+          .accountsPartial({
+            authority: authority.publicKey,
+            config: configPda,
+            pool: n5PoolPda,
+          })
+          .rpc();
+        expect.fail("should have failed");
+      } catch (err: any) {
+        const code = err.error?.errorCode?.code ?? err.message ?? "";
+        expect(code).to.include("WithdrawalsAlreadyEnabled");
+      }
+    });
+  });
 });

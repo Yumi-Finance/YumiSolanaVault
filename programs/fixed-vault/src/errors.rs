@@ -52,4 +52,6 @@ pub enum VaultError {
     NoRepayRemaining,
     #[msg("APR exceeds maximum allowed basis points (4000 bps = 40%)")]
     AprTooHigh,
+    #[msg("Withdrawals have already been enabled")]
+    WithdrawalsAlreadyEnabled,
 }
