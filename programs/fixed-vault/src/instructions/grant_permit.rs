@@ -6,13 +6,14 @@ use crate::state::{DepositPermit, ProtocolConfig, VaultPool};
 #[derive(Accounts)]
 #[instruction(user: Pubkey)]
 pub struct GrantPermit<'info> {
-    #[account(
-        mut,
-        constraint = authority.key() == config.authority @ VaultError::Unauthorized,
-    )]
+    #[account(mut)]
     pub authority: Signer<'info>,
 
-    #[account(seeds = [b"protocol-config"], bump = config.bump)]
+    #[account(
+        seeds = [b"protocol-config"],
+        bump = config.bump,
+        has_one = authority @ VaultError::Unauthorized,
+    )]
     pub config: Account<'info, ProtocolConfig>,
 
     #[account(

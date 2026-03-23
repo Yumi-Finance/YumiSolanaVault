@@ -15,12 +15,13 @@ pub struct UpdatePoolParams {
 
 #[derive(Accounts)]
 pub struct UpdatePool<'info> {
-    #[account(
-        constraint = authority.key() == config.authority @ VaultError::Unauthorized,
-    )]
     pub authority: Signer<'info>,
 
-    #[account(seeds = [b"protocol-config"], bump = config.bump)]
+    #[account(
+        seeds = [b"protocol-config"],
+        bump = config.bump,
+        has_one = authority @ VaultError::Unauthorized,
+    )]
     pub config: Account<'info, ProtocolConfig>,
 
     #[account(

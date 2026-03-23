@@ -6,12 +6,13 @@ use crate::state::{ProtocolConfig, VaultPool};
 
 #[derive(Accounts)]
 pub struct EnableWithdrawals<'info> {
-    #[account(
-        constraint = authority.key() == config.authority @ VaultError::Unauthorized,
-    )]
     pub authority: Signer<'info>,
 
-    #[account(seeds = [b"protocol-config"], bump = config.bump)]
+    #[account(
+        seeds = [b"protocol-config"],
+        bump = config.bump,
+        has_one = authority @ VaultError::Unauthorized,
+    )]
     pub config: Account<'info, ProtocolConfig>,
 
     #[account(

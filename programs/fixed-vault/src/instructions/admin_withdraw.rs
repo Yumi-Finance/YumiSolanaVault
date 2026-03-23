@@ -7,13 +7,14 @@ use crate::state::{ProtocolConfig, VaultPool};
 
 #[derive(Accounts)]
 pub struct AdminWithdraw<'info> {
-    #[account(
-        mut,
-        constraint = authority.key() == config.authority @ VaultError::Unauthorized,
-    )]
+    #[account(mut)]
     pub authority: Signer<'info>,
 
-    #[account(seeds = [b"protocol-config"], bump = config.bump)]
+    #[account(
+        seeds = [b"protocol-config"],
+        bump = config.bump,
+        has_one = authority @ VaultError::Unauthorized,
+    )]
     pub config: Account<'info, ProtocolConfig>,
 
     #[account(
@@ -31,8 +32,8 @@ pub struct AdminWithdraw<'info> {
 
     #[account(
         mut,
-        constraint = admin_token_account.mint == pool.deposit_mint,
-        constraint = admin_token_account.owner == authority.key(),
+        token::mint = pool.deposit_mint,
+        token::authority = authority,
     )]
     pub admin_token_account: Account<'info, TokenAccount>,
 

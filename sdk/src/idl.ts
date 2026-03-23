@@ -77,7 +77,10 @@ export type FixedVault = {
         {
           "name": "authority",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",
@@ -203,7 +206,10 @@ export type FixedVault = {
       "accounts": [
         {
           "name": "authority",
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",
@@ -255,7 +261,10 @@ export type FixedVault = {
         {
           "name": "authority",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",
@@ -403,7 +412,10 @@ export type FixedVault = {
         {
           "name": "authority",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",
@@ -559,7 +571,10 @@ export type FixedVault = {
       "accounts": [
         {
           "name": "authority",
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",
@@ -613,7 +628,10 @@ export type FixedVault = {
         {
           "name": "authority",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",
@@ -682,7 +700,10 @@ export type FixedVault = {
         {
           "name": "authority",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",
@@ -712,7 +733,10 @@ export type FixedVault = {
           }
         },
         {
-          "name": "pool"
+          "name": "pool",
+          "relations": [
+            "permit"
+          ]
         },
         {
           "name": "permit",
@@ -761,7 +785,10 @@ export type FixedVault = {
         {
           "name": "authority",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",
@@ -824,7 +851,10 @@ export type FixedVault = {
       "accounts": [
         {
           "name": "authority",
-          "signer": true
+          "signer": true,
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "config",

@@ -25,8 +25,8 @@ pub struct Withdraw<'info> {
 
     #[account(
         mut,
-        constraint = user_yield_account.mint == pool.yield_mint,
-        constraint = user_yield_account.owner == user.key(),
+        token::mint = yield_mint,
+        token::authority = user,
     )]
     pub user_yield_account: Account<'info, TokenAccount>,
 
@@ -38,8 +38,8 @@ pub struct Withdraw<'info> {
 
     #[account(
         mut,
-        constraint = user_token_account.mint == pool.deposit_mint,
-        constraint = user_token_account.owner == user.key(),
+        token::mint = pool.deposit_mint,
+        token::authority = user,
     )]
     pub user_token_account: Account<'info, TokenAccount>,
 

@@ -7,15 +7,13 @@ use crate::state::ProtocolConfig;
 
 #[derive(Accounts)]
 pub struct ProposeAuthority<'info> {
-    #[account(
-        constraint = authority.key() == config.authority @ VaultError::Unauthorized,
-    )]
     pub authority: Signer<'info>,
 
     #[account(
         mut,
         seeds = [b"protocol-config"],
         bump = config.bump,
+        has_one = authority @ VaultError::Unauthorized,
     )]
     pub config: Account<'info, ProtocolConfig>,
 }
