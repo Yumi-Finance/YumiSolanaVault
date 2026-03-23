@@ -1,6 +1,6 @@
 {
   "name": "@yumi-finance/vault-sdk",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "SDK for Yumi Solana Fixed-Term Vault contracts",
   "main": "dist/index.js",
   "module": "dist/esm/index.js",
@@ -33,5 +33,7 @@
     "typescript": "^5.7.3"
   },
   "license": "ISC",
-  "files": ["dist"]
+  "files": [
+    "dist"
+  ]
 }
