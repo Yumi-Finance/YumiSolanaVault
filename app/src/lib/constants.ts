@@ -22,4 +22,5 @@ export const NETWORKS: Record<NetworkName, { label: string; endpoint: string }> 
   },
 };
 
-export const DEFAULT_NETWORK: NetworkName = "devnet";
+export const DEFAULT_NETWORK: NetworkName =
+  (process.env.NEXT_PUBLIC_DEFAULT_NETWORK as NetworkName) || "devnet";
